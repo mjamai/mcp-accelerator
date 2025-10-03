@@ -1,0 +1,56 @@
+{
+  "name": "mcp-accelerator",
+  "version": "1.0.0",
+  "description": "Framework moderne et modulaire pour créer des serveurs MCP performants avec support multi-transport",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-accelerator": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts",
+    "docs": "typedoc --out docs src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "server",
+    "framework",
+    "typescript",
+    "multi-transport",
+    "websocket",
+    "sse",
+    "stdio"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.4",
+    "commander": "^11.1.0",
+    "ws": "^8.16.0",
+    "fastify": "^4.25.2",
+    "pino": "^8.17.2",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/ws": "^8.5.10",
+    "@types/jest": "^29.5.11",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "typedoc": "^0.25.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

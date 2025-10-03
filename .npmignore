@@ -1,0 +1,16 @@
+src/
+examples/
+*.test.ts
+*.spec.ts
+__tests__/
+.eslintrc.json
+tsconfig.json
+jest.config.js
+.github/
+coverage/
+.vscode/
+.idea/
+*.log
+.DS_Store
+CONTRIBUTING.md
+
