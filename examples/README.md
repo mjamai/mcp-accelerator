@@ -1,48 +1,112 @@
 # MCP Accelerator Examples
 
-This directory contains various examples demonstrating different features of MCP Accelerator.
+This folder contains usage examples of MCP Accelerator with different transports.
 
-## Examples
+## 📦 Prerequisites
 
-### 1. Basic STDIO (`basic-stdio/`)
+Each example requires specific package installations. Install only what you need!
 
-Simple echo server using STDIO transport. Perfect for command-line tools and CLI integrations.
+## 🚀 Available Examples
 
-**Features:**
-- STDIO transport
-- Basic tool registration
-- Simple echo functionality
+### 1. Basic STDIO ([basic-stdio/](basic-stdio/))
+
+Simple CLI server using stdin/stdout.
+
+**Installation:**
+```bash
+npm install @mcp-accelerator/core @mcp-accelerator/transport-stdio zod
+```
 
 **Run:**
 ```bash
-cd examples/basic-stdio
-npx ts-node index.ts
+npm run build
+node examples/basic-stdio/index.js
 ```
 
-### 2. WebSocket Server (`websocket-server/`)
-
-Real-time calculator server using WebSocket transport. Demonstrates bidirectional communication.
-
 **Features:**
-- WebSocket transport
-- Multiple mathematical tools
-- Real-time communication
-- Graceful shutdown
+- ✅ Communication via stdin/stdout
+- ✅ Simple echo tool
+- ✅ No external dependencies
+
+---
+
+### 2. HTTP API ([http-api/](http-api/))
+
+HTTP/REST server with data processing tools.
+
+**Installation:**
+```bash
+npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
+```
 
 **Run:**
 ```bash
-cd examples/websocket-server
-npx ts-node index.ts
+npm run build
+node examples/http-api/index.js
 ```
 
-**Test with a WebSocket client:**
+**Test:**
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Tool call
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "request",
+    "id": "1",
+    "method": "tools/execute",
+    "params": {
+      "name": "text-stats",
+      "input": {
+        "text": "Hello world! This is a test."
+      }
+    }
+  }'
+```
+
+**Features:**
+- ✅ REST API with Fastify
+- ✅ Text processing tools
+- ✅ JSON validation
+- ✅ Array operations
+- ✅ Logging and metrics plugins
+
+---
+
+### 3. WebSocket Server ([websocket-server/](websocket-server/))
+
+Real-time calculator server with WebSocket.
+
+**Installation:**
+```bash
+npm install @mcp-accelerator/core @mcp-accelerator/transport-websocket zod
+```
+
+**Run:**
+```bash
+npm run build
+node examples/websocket-server/index.js
+```
+
+**Test client:**
 ```javascript
-const ws = new WebSocket('ws://127.0.0.1:3001');
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://localhost:3001');
 
 ws.on('open', () => {
+  // Request tool list
   ws.send(JSON.stringify({
     type: 'request',
     id: '1',
+    method: 'tools/list',
+  }));
+
+  // Execute addition
+  ws.send(JSON.stringify({
+    type: 'request',
+    id: '2',
     method: 'tools/execute',
     params: {
       name: 'add',
@@ -50,125 +114,104 @@ ws.on('open', () => {
     }
   }));
 });
+
+ws.on('message', (data) => {
+  console.log('Received:', JSON.parse(data.toString()));
+});
 ```
-
-### 3. HTTP API (`http-api/`)
-
-RESTful API server with data processing tools. Includes plugins for logging and metrics.
 
 **Features:**
-- HTTP transport
-- Text processing tools
-- JSON validation
-- Array operations
-- Built-in plugins (Logging, Metrics)
+- ✅ Real-time bidirectional communication
+- ✅ Calculator with add, multiply, power
+- ✅ Broadcast messages to all clients
+- ✅ Support for multiple simultaneous clients
 
-**Run:**
+---
+
+### 4. Custom Plugin ([custom-plugin/](custom-plugin/))
+
+Example of creating a custom plugin.
+
+**Installation:**
 ```bash
-cd examples/http-api
-npx ts-node index.ts
+npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
 ```
-
-**Test with curl:**
-```bash
-# List tools
-curl -X POST http://127.0.0.1:3000/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"type":"request","id":"1","method":"tools/list"}'
-
-# Execute tool
-curl -X POST http://127.0.0.1:3000/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "request",
-    "id": "2",
-    "method": "tools/execute",
-    "params": {
-      "name": "text-stats",
-      "input": {"text": "Hello world, this is a test"}
-    }
-  }'
-```
-
-### 4. Custom Plugin (`custom-plugin/`)
-
-Demonstrates creating custom plugins for authentication and authorization.
 
 **Features:**
-- Custom authentication plugin
-- Middleware for token validation
-- Protected endpoints
-- Lifecycle hooks
+- ✅ Authentication plugin
+- ✅ Custom middleware
+- ✅ Lifecycle hooks
+- ✅ Reusable across projects
 
-**Run:**
-```bash
-cd examples/custom-plugin
-npx ts-node index.ts
-```
+---
 
-**Test with authentication:**
-```bash
-curl -X POST http://127.0.0.1:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "x-auth-token: secret-token-123" \
-  -d '{
-    "type": "request",
-    "id": "1",
-    "method": "tools/execute",
-    "params": {
-      "name": "secret-operation",
-      "input": {"data": "confidential"}
-    }
-  }'
-```
+## 🏗️ Example Structure
 
-## Common Patterns
-
-### Tool Registration
+Each example follows this structure:
 
 ```typescript
+// 1. Import required packages
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
+
+// 2. Create server
+const server = new MCPServer({
+  name: 'my-server',
+  version: '1.0.0',
+});
+
+// 3. Configure transport
+server.setTransport(new HttpTransport({ port: 3000 }));
+
+// 4. Register tools
 server.registerTool({
   name: 'my-tool',
-  description: 'Description of what the tool does',
-  inputSchema: z.object({
-    param: z.string(),
-  }),
-  handler: async (input, context) => {
-    return { result: 'processed' };
-  },
+  description: 'My tool',
+  inputSchema: z.object({ /* ... */ }),
+  handler: async (input) => { /* ... */ },
 });
+
+// 5. Start server
+await server.start();
 ```
 
-### Custom Middleware
+## 💡 Tips
 
-```typescript
-server.registerMiddleware({
-  name: 'my-middleware',
-  priority: 50,
-  handler: async (message, context, next) => {
-    // Pre-processing
-    await next();
-    // Post-processing
-  },
-});
+### Choosing the Right Transport
+
+- **STDIO**: CLI, scripts, integration with other processes
+- **HTTP**: REST APIs, standard web integration
+- **WebSocket**: Real-time, chat, push notifications
+- **SSE**: Unidirectional streaming, logs, events
+
+### Development
+
+For development, use watch mode:
+
+```bash
+# In the root directory
+npm run dev
 ```
 
-### Lifecycle Hooks
+This will automatically recompile all packages on changes.
 
-```typescript
-server.registerHook({
-  name: 'my-hook',
-  phase: 'beforeToolExecution',
-  handler: async (ctx) => {
-    console.log('Tool about to execute:', ctx.toolName);
-  },
-});
+### Production
+
+For production, compile all packages:
+
+```bash
+npm run build
 ```
 
-## Next Steps
+## 📚 Resources
 
-- Explore the source code of each example
-- Modify examples to suit your needs
-- Create your own tools and plugins
-- Refer to the main [README](../README.md) for full documentation
+- [Main documentation](../README.md)
+- [Core Package](../packages/core/README.md)
+- [STDIO Transport](../packages/transport-stdio/README.md)
+- [HTTP Transport](../packages/transport-http/README.md)
+- [WebSocket Transport](../packages/transport-websocket/README.md)
+- [SSE Transport](../packages/transport-sse/README.md)
 
+## 🤝 Contributing
+
+Feel free to propose new examples via a Pull Request!

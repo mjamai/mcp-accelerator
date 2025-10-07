@@ -1,18 +1,22 @@
 /**
  * Basic STDIO example - Simple echo server
+ * 
+ * Installation:
+ *   npm install @mcp-accelerator/core @mcp-accelerator/transport-stdio zod
  */
 
-import { createServer, z } from '../../src';
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { StdioTransport } from '@mcp-accelerator/transport-stdio';
 
 async function main() {
-  // Create server with STDIO transport
-  const server = createServer({
+  // Create server
+  const server = new MCPServer({
     name: 'basic-stdio-server',
     version: '1.0.0',
-    transport: {
-      type: 'stdio',
-    },
   });
+
+  // Set STDIO transport
+  server.setTransport(new StdioTransport());
 
   // Register a simple echo tool
   server.registerTool({
@@ -38,4 +42,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

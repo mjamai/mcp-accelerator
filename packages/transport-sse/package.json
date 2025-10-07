@@ -1,0 +1,36 @@
+{
+  "name": "@mcp-accelerator/transport-sse",
+  "version": "1.0.0",
+  "description": "Server-Sent Events (SSE) transport for MCP Accelerator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "transport",
+    "sse",
+    "server-sent-events",
+    "streaming",
+    "mcp-accelerator"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mcp-accelerator/core": "^1.0.0"
+  },
+  "dependencies": {
+    "fastify": "^4.25.2"
+  },
+  "devDependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

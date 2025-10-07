@@ -1,0 +1,31 @@
+{
+  "name": "@mcp-accelerator/transport-stdio",
+  "version": "1.0.0",
+  "description": "STDIO transport for MCP Accelerator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "transport",
+    "stdio",
+    "mcp-accelerator"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mcp-accelerator/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

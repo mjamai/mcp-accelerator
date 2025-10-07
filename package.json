@@ -1,20 +1,24 @@
 {
-  "name": "mcp-accelerator",
+  "name": "mcp-accelerator-monorepo",
   "version": "1.0.0",
   "description": "Framework moderne et modulaire pour créer des serveurs MCP performants avec support multi-transport",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "mcp-accelerator": "dist/cli/index.js"
-  },
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "jest",
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w @mcp-accelerator/core",
+    "build:stdio": "npm run build -w @mcp-accelerator/transport-stdio",
+    "build:http": "npm run build -w @mcp-accelerator/transport-http",
+    "build:websocket": "npm run build -w @mcp-accelerator/transport-websocket",
+    "build:sse": "npm run build -w @mcp-accelerator/transport-sse",
+    "dev": "npm run dev --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "test:watch": "jest --watch",
-    "lint": "eslint src/**/*.ts",
-    "docs": "typedoc --out docs src/index.ts",
-    "prepublishOnly": "npm run build"
+    "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules",
+    "lint": "eslint packages/**/src/**/*.ts",
+    "docs": "typedoc --out docs packages/core/src/index.ts"
   },
   "keywords": [
     "mcp",
@@ -25,18 +29,11 @@
     "multi-transport",
     "websocket",
     "sse",
-    "stdio"
+    "stdio",
+    "monorepo"
   ],
   "author": "Mohamed JAMAI",
   "license": "MIT",
-  "dependencies": {
-    "zod": "^3.22.4",
-    "commander": "^11.1.0",
-    "ws": "^8.16.0",
-    "fastify": "^4.25.2",
-    "pino": "^8.17.2",
-    "chalk": "^4.1.2"
-  },
   "devDependencies": {
     "@types/node": "^20.10.6",
     "@types/ws": "^8.5.10",
@@ -47,10 +44,11 @@
     "eslint": "^8.56.0",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
-    "typedoc": "^0.25.6"
+    "typedoc": "^0.25.6",
+    "zod": "^3.22.4"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=7.0.0"
   }
 }
-

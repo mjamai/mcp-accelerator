@@ -1,20 +1,25 @@
 /**
  * WebSocket example - Real-time calculator server
+ * 
+ * Installation:
+ *   npm install @mcp-accelerator/core @mcp-accelerator/transport-websocket zod
  */
 
-import { createServer, z } from '../../src';
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { WebSocketTransport } from '@mcp-accelerator/transport-websocket';
 
 async function main() {
-  // Create server with WebSocket transport
-  const server = createServer({
+  // Create server
+  const server = new MCPServer({
     name: 'websocket-calculator',
     version: '1.0.0',
-    transport: {
-      type: 'websocket',
-      port: 3001,
-      host: '127.0.0.1',
-    },
   });
+
+  // Set WebSocket transport
+  server.setTransport(new WebSocketTransport({
+    host: '127.0.0.1',
+    port: 3001,
+  }));
 
   // Register mathematical operation tools
   server.registerTool({
@@ -62,11 +67,31 @@ async function main() {
     },
   });
 
+  // Broadcast tool
+  server.registerTool({
+    name: 'broadcast',
+    description: 'Broadcast a message to all connected clients',
+    inputSchema: z.object({
+      message: z.string().describe('Message to broadcast'),
+    }),
+    handler: async (input) => {
+      const transport = server.getTransport();
+      if (transport) {
+        await transport.broadcast({
+          type: 'event',
+          method: 'notification',
+          params: { message: input.message },
+        });
+      }
+      return { broadcasted: true, message: input.message };
+    },
+  });
+
   // Start the server
   await server.start();
   
   console.log('WebSocket calculator server is running on ws://127.0.0.1:3001');
-  console.log('Available tools: add, multiply, power');
+  console.log('Available tools: add, multiply, power, broadcast');
 
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
@@ -77,4 +102,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

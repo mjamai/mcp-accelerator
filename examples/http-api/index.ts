@@ -1,24 +1,29 @@
 /**
  * HTTP example - RESTful API server with data processing tools
+ * 
+ * Installation:
+ *   npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
  */
 
-import { createServer, z, LoggingPlugin, MetricsPlugin } from '../../src';
+import { MCPServer, z, LoggingPlugin, MetricsPlugin } from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
 
 async function main() {
-  // Create server with HTTP transport and plugins
-  const server = createServer({
+  // Create server
+  const server = new MCPServer({
     name: 'http-api-server',
     version: '1.0.0',
-    transport: {
-      type: 'http',
-      port: 3000,
-      host: '127.0.0.1',
-    },
     plugins: [
       new LoggingPlugin(),
       new MetricsPlugin(),
     ],
   });
+
+  // Set HTTP transport
+  server.setTransport(new HttpTransport({
+    host: '127.0.0.1',
+    port: 3000,
+  }));
 
   // Text processing tool
   server.registerTool({
@@ -124,4 +129,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

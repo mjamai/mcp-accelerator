@@ -1,0 +1,38 @@
+{
+  "name": "@mcp-accelerator/core",
+  "version": "1.0.0",
+  "description": "Core package for MCP Accelerator framework",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "server",
+    "framework",
+    "typescript"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "zod": "^3.22.4"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "pino": "^8.17.2",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3",
+    "zod": "^3.22.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

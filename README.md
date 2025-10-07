@@ -5,36 +5,56 @@ A modern, modular, and high-performance framework for building **Model Context P
 ## ✨ Features
 
 - 🎯 **Simple API** - Create servers with minimal boilerplate
-- 🔌 **Multi-Transport** - STDIO, HTTP, WebSocket, SSE support out of the box
-- 🛠️ **Type-Safe Tools** - Define tools with Zod schema validation
+- 🔌 **Multi-Transport** - STDIO, HTTP, WebSocket, SSE support
+- 📦 **Modular Architecture** - Install only what you need
+- 🛠️ **Type-Safe** - Tools with Zod schema validation
 - 🧩 **Plugin System** - Extend functionality with custom plugins
-- 🎨 **CLI Generators** - Scaffold projects, tools, and transports quickly
 - 📝 **Full TypeScript** - Complete type safety and IntelliSense
 - ⚡ **High Performance** - Optimized for speed and reliability
-- 🔄 **Interchangeable Transports** - Switch between transports without code changes
+- 🔄 **Interchangeable Transports** - Switch transports without code changes
 
 ## 📦 Installation
 
+### Basic Installation
+
 ```bash
-npm install mcp-accelerator
+# Core package (lightweight, includes only the core)
+npm install @mcp-accelerator/core zod
 ```
+
+### Add the transports you need
+
+```bash
+# STDIO (no external dependencies - Node.js native)
+npm install @mcp-accelerator/transport-stdio
+
+# HTTP (Fastify ~2 MB)
+npm install @mcp-accelerator/transport-http
+
+# WebSocket (ws ~1 MB)
+npm install @mcp-accelerator/transport-websocket
+
+# Server-Sent Events (Fastify ~2 MB)
+npm install @mcp-accelerator/transport-sse
+```
+
+> **💡 Modular Architecture Benefit**: Install only the transports you need, reducing bundle size and installation time!
 
 ## 🚀 Quick Start
 
-### Create a Simple Server
+### STDIO Example (CLI)
 
 ```typescript
-import { createServer, z } from 'mcp-accelerator';
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { StdioTransport } from '@mcp-accelerator/transport-stdio';
 
-const server = createServer({
-  name: 'my-mcp-server',
+const server = new MCPServer({
+  name: 'my-cli-server',
   version: '1.0.0',
-  transport: {
-    type: 'stdio', // or 'http', 'websocket', 'sse'
-  },
 });
 
-// Register a tool
+server.setTransport(new StdioTransport());
+
 server.registerTool({
   name: 'greet',
   description: 'Greet a user by name',
@@ -46,456 +66,297 @@ server.registerTool({
   },
 });
 
-// Start the server
 await server.start();
 ```
 
-### Using the CLI
+### HTTP Example
 
-Generate a complete project:
+```typescript
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
 
-```bash
-npx mcp-accelerator create-project my-server --transport websocket
-cd my-server
-npm install
-npm run dev
+const server = new MCPServer({
+  name: 'my-http-server',
+  version: '1.0.0',
+});
+
+server.setTransport(new HttpTransport({
+  host: '0.0.0.0',
+  port: 3000,
+}));
+
+server.registerTool({
+  name: 'calculate',
+  description: 'Perform a calculation',
+  inputSchema: z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  handler: async (input) => {
+    const operations = {
+      add: input.a + input.b,
+      subtract: input.a - input.b,
+      multiply: input.a * input.b,
+      divide: input.a / input.b,
+    };
+    return { result: operations[input.operation] };
+  },
+});
+
+await server.start();
 ```
 
-Generate a new tool:
+### WebSocket Example
 
-```bash
-npx mcp-accelerator generate-tool calculator --description "Perform calculations"
+```typescript
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { WebSocketTransport } from '@mcp-accelerator/transport-websocket';
+
+const server = new MCPServer({
+  name: 'my-websocket-server',
+  version: '1.0.0',
+});
+
+server.setTransport(new WebSocketTransport({
+  host: '0.0.0.0',
+  port: 3001,
+}));
+
+server.registerTool({
+  name: 'broadcast',
+  description: 'Broadcast a message to all clients',
+  inputSchema: z.object({
+    message: z.string(),
+  }),
+  handler: async (input, context) => {
+    const transport = server.getTransport();
+    if (transport) {
+      await transport.broadcast({
+        type: 'event',
+        method: 'notification',
+        params: { message: input.message },
+      });
+    }
+    return { broadcasted: true };
+  },
+});
+
+await server.start();
 ```
 
-Generate a custom transport:
+## 📚 Packages
 
-```bash
-npx mcp-accelerator generate-transport mqtt
-```
+MCP Accelerator is organized into several modular packages:
 
-## 📚 Core Concepts
+| Package | Description | Size | Dependencies |
+|---------|-------------|------|--------------|
+| [`@mcp-accelerator/core`](packages/core) | 🎯 Core package with server and types | Lightweight | zod |
+| [`@mcp-accelerator/transport-stdio`](packages/transport-stdio) | 📝 Stdin/stdout communication | Minimal | None |
+| [`@mcp-accelerator/transport-http`](packages/transport-http) | 🌐 HTTP/REST server | ~2 MB | fastify |
+| [`@mcp-accelerator/transport-websocket`](packages/transport-websocket) | 🔌 WebSocket communication | ~1 MB | ws |
+| [`@mcp-accelerator/transport-sse`](packages/transport-sse) | 📡 Server-Sent Events | ~2 MB | fastify |
+
+## 🎯 Core Concepts
 
 ### 1. Server Configuration
 
 ```typescript
-import { createServer } from 'mcp-accelerator';
+import { MCPServer } from '@mcp-accelerator/core';
 
-const server = createServer({
+const server = new MCPServer({
   name: 'my-server',
   version: '1.0.0',
   logger: customLogger, // Optional custom logger
-  transport: {
-    type: 'http',
-    port: 3000,
-    host: '127.0.0.1',
-  },
-  plugins: [myPlugin], // Optional plugins
+  plugins: [myPlugin],  // Optional plugins
 });
 ```
 
 ### 2. Tools
 
-Tools are the primary way to expose functionality in MCP servers.
+Tools are the primary way to expose functionality:
 
 ```typescript
-import { z } from 'mcp-accelerator';
+import { z } from 'zod';
 
 server.registerTool({
-  name: 'process-data',
-  description: 'Process data with custom logic',
+  name: 'searchDatabase',
+  description: 'Search the database',
   inputSchema: z.object({
-    data: z.string(),
-    options: z.object({
-      format: z.enum(['json', 'xml', 'csv']),
-      validate: z.boolean().optional(),
-    }),
+    query: z.string().min(1),
+    limit: z.number().optional().default(10),
   }),
   handler: async (input, context) => {
-    context.logger.info('Processing data');
+    // Access logger
+    context.logger.info(`Searching: ${input.query}`);
     
-    // Your logic here
-    const result = processData(input.data, input.options);
+    // Your business logic
+    const results = await database.search(input.query, input.limit);
     
-    return {
-      success: true,
-      processed: result,
-    };
-  },
-  metadata: {
-    category: 'data-processing',
-    version: '1.0.0',
+    return { results, count: results.length };
   },
 });
 ```
 
-### 3. Transports
+### 3. Switching Transports
 
-MCP Accelerator supports multiple transports that can be switched without changing your tool logic.
-
-#### STDIO Transport
-
-Perfect for CLI tools and process communication:
+You can easily switch transports without modifying your business logic:
 
 ```typescript
-import { StdioTransport } from 'mcp-accelerator';
+import { StdioTransport } from '@mcp-accelerator/transport-stdio';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
 
-const transport = new StdioTransport();
-await server.setTransport(transport);
-```
+// Development with STDIO
+if (process.env.NODE_ENV === 'development') {
+  server.setTransport(new StdioTransport());
+}
 
-#### HTTP Transport
-
-RESTful API with Fastify:
-
-```typescript
-import { HttpTransport } from 'mcp-accelerator';
-
-const transport = new HttpTransport({
-  host: '127.0.0.1',
-  port: 3000,
-});
-await server.setTransport(transport);
-```
-
-#### WebSocket Transport
-
-Real-time bidirectional communication:
-
-```typescript
-import { WebSocketTransport } from 'mcp-accelerator';
-
-const transport = new WebSocketTransport({
-  host: '127.0.0.1',
-  port: 3001,
-});
-await server.setTransport(transport);
-```
-
-#### SSE Transport
-
-Server-Sent Events for streaming:
-
-```typescript
-import { SSETransport } from 'mcp-accelerator';
-
-const transport = new SSETransport({
-  host: '127.0.0.1',
-  port: 3002,
-});
-await server.setTransport(transport);
+// Production with HTTP
+if (process.env.NODE_ENV === 'production') {
+  server.setTransport(new HttpTransport({ port: 3000 }));
+}
 ```
 
 ### 4. Plugins
 
-Extend server functionality with plugins:
+Create reusable plugins:
 
 ```typescript
-import { Plugin, MCPServerInterface } from 'mcp-accelerator';
+import { Plugin, MCPServerInterface } from '@mcp-accelerator/core';
 
-class MyPlugin implements Plugin {
-  name = 'my-plugin';
-  version = '1.0.0';
-  priority = 10; // Higher priority runs first
-
-  async initialize(server: MCPServerInterface): Promise<void> {
-    // Add middleware
+const rateLimitPlugin: Plugin = {
+  name: 'rate-limit',
+  version: '1.0.0',
+  async initialize(server: MCPServerInterface) {
     server.registerMiddleware({
-      name: 'my-middleware',
-      handler: async (message, context, next) => {
-        console.log('Processing message');
+      name: 'rate-limit',
+      priority: 100,
+      async handler(message, context, next) {
+        // Your rate limiting logic
         await next();
       },
     });
+  },
+};
 
-    // Add lifecycle hooks
-    server.registerHook({
-      name: 'my-hook',
-      phase: 'beforeToolExecution',
-      handler: async (ctx) => {
-        console.log('Tool executing:', ctx.toolName);
-      },
-    });
-  }
-
-  async cleanup(): Promise<void> {
-    // Cleanup resources
-  }
-}
-
-// Use the plugin
-const server = createServer({
+const server = new MCPServer({
   name: 'my-server',
   version: '1.0.0',
-  plugins: [new MyPlugin()],
+  plugins: [rateLimitPlugin],
 });
 ```
 
-### 5. Middleware
+### 5. Lifecycle Hooks
 
-Process messages before they reach tools:
-
-```typescript
-server.registerMiddleware({
-  name: 'logging-middleware',
-  priority: 100,
-  handler: async (message, context, next) => {
-    const start = Date.now();
-    console.log('Request received:', message.method);
-    
-    await next(); // Call next middleware or handler
-    
-    const duration = Date.now() - start;
-    console.log('Request completed in', duration, 'ms');
-  },
-});
-```
-
-### 6. Lifecycle Hooks
-
-React to server events:
+React to server events using the `HookPhase` enum:
 
 ```typescript
+import { HookPhase } from '@mcp-accelerator/core';
+
 server.registerHook({
-  name: 'client-connect-logger',
-  phase: 'onClientConnect',
-  handler: async (ctx) => {
-    console.log('Client connected:', ctx.clientId);
+  name: 'log-connections',
+  phase: HookPhase.OnClientConnect,
+  handler: async (context) => {
+    console.log(`Client connected: ${context.data.clientId}`);
   },
 });
 
 server.registerHook({
-  name: 'tool-execution-logger',
-  phase: 'beforeToolExecution',
-  handler: async (ctx) => {
-    console.log('Executing tool:', ctx.toolName);
+  name: 'log-tool-execution',
+  phase: HookPhase.BeforeToolExecution,
+  handler: async (context) => {
+    console.log(`Executing tool: ${context.data.toolName}`);
   },
 });
 ```
 
-Available phases:
-- `onStart` - Server starting
-- `onStop` - Server stopping
-- `onClientConnect` - Client connected
-- `onClientDisconnect` - Client disconnected
-- `beforeToolExecution` - Before tool executes
-- `afterToolExecution` - After tool executes
-
-## 🎨 Built-in Plugins
-
-### Logging Plugin
-
-Adds comprehensive logging for all requests and lifecycle events:
-
-```typescript
-import { LoggingPlugin } from 'mcp-accelerator';
-
-const server = createServer({
-  name: 'my-server',
-  version: '1.0.0',
-  plugins: [new LoggingPlugin()],
-});
-```
-
-### Metrics Plugin
-
-Tracks tool execution statistics:
-
-```typescript
-import { MetricsPlugin } from 'mcp-accelerator';
-
-const metricsPlugin = new MetricsPlugin();
-
-const server = createServer({
-  name: 'my-server',
-  version: '1.0.0',
-  plugins: [metricsPlugin],
-});
-
-// Get metrics
-const metrics = metricsPlugin.getMetrics();
-console.log(metrics); // { toolExecutions: 42, totalDuration: 1234, errors: 2 }
-```
-
-### Rate Limit Plugin
-
-Protect your server from abuse:
-
-```typescript
-import { RateLimitPlugin } from 'mcp-accelerator';
-
-const server = createServer({
-  name: 'my-server',
-  version: '1.0.0',
-  plugins: [
-    new RateLimitPlugin(100, 60000), // 100 requests per minute
-  ],
-});
-```
-
-## 🔧 Advanced Usage
-
-### Custom Logger
-
-Implement your own logger:
-
-```typescript
-import { Logger } from 'mcp-accelerator';
-import pino from 'pino';
-
-class PinoLogger implements Logger {
-  private logger = pino();
-
-  info(message: string, meta?: Record<string, unknown>): void {
-    this.logger.info(meta, message);
-  }
-
-  warn(message: string, meta?: Record<string, unknown>): void {
-    this.logger.warn(meta, message);
-  }
-
-  error(message: string, error?: Error, meta?: Record<string, unknown>): void {
-    this.logger.error({ ...meta, err: error }, message);
-  }
-
-  debug(message: string, meta?: Record<string, unknown>): void {
-    this.logger.debug(meta, message);
-  }
-}
-
-const server = createServer({
-  name: 'my-server',
-  version: '1.0.0',
-  logger: new PinoLogger(),
-});
-```
-
-### Error Handling
-
-Centralized error handling:
-
-```typescript
-import { ErrorHandler, MCPErrorCode } from 'mcp-accelerator';
-
-const errorHandler = new ErrorHandler();
-
-// Register custom error handler
-errorHandler.registerHandler(MCPErrorCode.VALIDATION_ERROR, (error) => {
-  console.error('Validation failed:', error.message);
-  // Send notification, log to external service, etc.
-});
-```
-
-### Dynamic Tool Registration
-
-Add and remove tools at runtime:
-
-```typescript
-// Add tool
-server.registerTool(newTool);
-
-// Remove tool
-server.unregisterTool('tool-name');
-
-// List all tools
-const tools = server.listTools();
-```
-
-### Server Status
-
-Monitor server status:
-
-```typescript
-const status = server.getStatus();
-console.log(status);
-// {
-//   name: 'my-server',
-//   version: '1.0.0',
-//   isRunning: true,
-//   transport: 'websocket',
-//   toolsCount: 5,
-//   clientsCount: 3
-// }
-```
+**Available Hook Phases:**
+- `HookPhase.OnStart` - Server is starting
+- `HookPhase.OnStop` - Server is stopping
+- `HookPhase.OnClientConnect` - Client connected
+- `HookPhase.OnClientDisconnect` - Client disconnected
+- `HookPhase.BeforeToolExecution` - Before a tool executes
+- `HookPhase.AfterToolExecution` - After a tool executes
 
 ## 📖 Examples
 
-Check out the [examples/](./examples) directory for complete working examples:
+Check the [`examples/`](examples/) folder for complete examples:
 
-- **basic-stdio** - Simple echo server
-- **websocket-server** - Real-time calculator
-- **http-api** - RESTful API with data processing
-- **custom-plugin** - Authentication plugin example
+- [STDIO Basic](examples/basic-stdio/) - Simple CLI server
+- [HTTP API](examples/http-api/) - REST API
+- [WebSocket Server](examples/websocket-server/) - Real-time server
+- [Custom Plugin](examples/custom-plugin/) - Create a custom plugin
 
-## 🧪 Testing
+## 🏗️ Monorepo Architecture
 
-MCP Accelerator is designed to be testable:
-
-```typescript
-import { createServer, SilentLogger, z } from 'mcp-accelerator';
-
-describe('My Tool', () => {
-  let server;
-
-  beforeEach(() => {
-    server = createServer({
-      name: 'test-server',
-      version: '1.0.0',
-      logger: new SilentLogger(), // Silent logger for tests
-    });
-
-    server.registerTool({
-      name: 'test-tool',
-      description: 'Test tool',
-      inputSchema: z.object({
-        value: z.number(),
-      }),
-      handler: async (input) => {
-        return { doubled: input.value * 2 };
-      },
-    });
-  });
-
-  it('should execute tool correctly', async () => {
-    const toolManager = server['toolManager'];
-    const result = await toolManager.executeTool(
-      'test-tool',
-      { value: 5 },
-      { clientId: 'test', logger: new SilentLogger() }
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.result.doubled).toBe(10);
-  });
-});
-```
-
-## 📝 API Documentation
-
-Generate full API documentation:
+This project uses npm workspaces to manage multiple packages:
 
 ```bash
-npm run docs
+# Install all dependencies
+npm install
+
+# Build all packages
+npm run build
+
+# Build a specific package
+npm run build:core
+npm run build:stdio
+npm run build:http
+npm run build:websocket
+npm run build:sse
+
+# Watch mode for development
+npm run dev
+
+# Tests
+npm test
 ```
 
-This will generate TypeDoc documentation in the `docs/` directory.
+## 🔧 Development
+
+```bash
+# Clone the repo
+git clone https://github.com/mohamedjamai/mcp-accelerator.git
+cd mcp-accelerator
+
+# Install dependencies
+npm install
+
+# Build all packages
+npm run build
+
+# Run tests
+npm test
+
+# Watch mode
+npm run dev
+```
+
+## 📝 Comparison with Monolithic Architecture
+
+| Aspect | Before (Monolithic) | After (Modular) |
+|--------|---------------------|-----------------|
+| **Minimal install** | ~5 MB | ~500 KB |
+| **STDIO bundle** | Includes Fastify + ws | No external dependencies |
+| **Flexibility** | All dependencies installed | Choose what you need |
+| **Install time** | ~30 seconds | ~5 seconds (core + stdio) |
+| **Tree-shaking** | Limited | Optimal |
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
-MIT
+MIT © Mohamed JAMAI
 
-## 🙏 Acknowledgments
+## 🔗 Useful Links
 
-Built with:
-- [Zod](https://github.com/colinhacks/zod) - Schema validation
-- [Fastify](https://www.fastify.io/) - HTTP server
-- [ws](https://github.com/websockets/ws) - WebSocket implementation
-- [Commander](https://github.com/tj/commander.js) - CLI framework
+- [MCP Documentation](https://modelcontextprotocol.io)
+- [Zod Documentation](https://zod.dev)
+- [Fastify Documentation](https://www.fastify.io)
+- [ws Documentation](https://github.com/websockets/ws)
 
 ---
 
 **Made with ❤️ for the MCP community**
-
