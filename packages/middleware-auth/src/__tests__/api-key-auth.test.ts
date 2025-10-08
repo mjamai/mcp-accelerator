@@ -514,6 +514,7 @@ describe('API Key Authentication Middleware', () => {
         const context: MiddlewareContext = {
           clientId: 'test-client',
           logger: mockLogger,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           metadata: undefined as any,
         };
 
@@ -537,6 +538,7 @@ describe('API Key Authentication Middleware', () => {
           clientId: 'test-client',
           logger: mockLogger,
           metadata: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             'x-api-key': null as any,
           },
         };

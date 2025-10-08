@@ -66,7 +66,9 @@ describe('Circuit Breaker Middleware', () => {
     for (let i = 0; i < 2; i++) {
       try {
         await middleware.handler(mockMessage, mockContext, next);
-      } catch (error) {}
+      } catch (error) {
+        // Expected to fail
+      }
     }
 
     // Wait for timeout
@@ -93,7 +95,9 @@ describe('Circuit Breaker Middleware', () => {
     for (let i = 0; i < 2; i++) {
       try {
         await middleware.handler(mockMessage, mockContext, next);
-      } catch (error) {}
+      } catch (error) {
+        // Expected to fail
+      }
     }
 
     expect(onOpen).toHaveBeenCalled();
@@ -116,7 +120,9 @@ describe('Circuit Breaker Middleware', () => {
     for (let i = 0; i < 2; i++) {
       try {
         await middleware.handler(mockMessage, mockContext, next);
-      } catch (error) {}
+      } catch (error) {
+        // Expected to fail
+      }
     }
 
     // Wait for half-open

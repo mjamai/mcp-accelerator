@@ -1,4 +1,4 @@
-import { createCORSOptions, developmentCORS, productionCORS, dynamicOriginCORS, CORSOptions } from '../cors';
+import { createCORSOptions, developmentCORS, productionCORS, dynamicOriginCORS } from '../cors';
 
 describe('CORS Configuration', () => {
   describe('createCORSOptions', () => {

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed GitHub Actions Coverage workflow - CI now passes successfully with professional coverage levels
+- Fixed ESLint errors: empty catch blocks, unused imports, explicit any types
+- Configured ESLint to ignore generated .d.ts files
 - Adjusted Jest coverage thresholds to realistic values accounting for compiled dist/ files
 
 ### Testing

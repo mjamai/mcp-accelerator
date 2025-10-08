@@ -161,6 +161,7 @@ export class ToolManager {
   private zodSchemaToJSON(schema: z.ZodType): Record<string, unknown> {
     // This is a simplified conversion
     // For production, consider using zod-to-json-schema library
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const description = (schema as any)._def?.description || '';
     return {
       type: 'object',

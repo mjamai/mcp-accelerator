@@ -382,13 +382,17 @@ export interface ToolExecutionResult<TOutput = unknown> {
 /**
  * Extract input type from Tool
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type InferToolInput<T extends Tool<any, any>> = 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   T extends Tool<infer I, any> ? I : never;
 
 /**
  * Extract output type from Tool
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type InferToolOutput<T extends Tool<any, any>> = 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   T extends Tool<any, infer O> ? O : never;
 
 /**

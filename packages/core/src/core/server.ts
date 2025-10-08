@@ -162,6 +162,7 @@ export class MCPServer implements MCPServerInterface {
   /**
    * Load a plugin
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async loadPlugin(plugin: any): Promise<void> {
     try {
       this.logger.info(`Loading plugin: ${plugin.name} v${plugin.version}`);
