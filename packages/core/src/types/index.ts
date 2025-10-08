@@ -5,185 +5,249 @@
 import { z } from 'zod';
 
 /**
- * Configuration du serveur MCP
+ * Generic metadata type for extensibility
+ * Allows any JSON-serializable value
+ */
+export type Metadata = Record<string, unknown>;
+
+/**
+ * Strongly typed metadata with known fields
+ * Provides IntelliSense for common fields while allowing extensions
+ */
+export interface StrictMetadata {
+  // Common fields
+  ip?: string;
+  userAgent?: string;
+  authenticated?: boolean;
+  user?: {
+    id: string;
+    email?: string;
+    roles?: string[];
+    permissions?: string[];
+    plan?: string;
+    [key: string]: unknown;
+  };
+  // Rate limiting
+  rateLimit?: {
+    limit: number;
+    current: number;
+    remaining: number;
+    reset: number;
+  };
+  // Observability
+  traceId?: string;
+  spanId?: string;
+  // Custom fields
+  [key: string]: unknown;
+}
+
+/**
+ * MCP Server Configuration
  */
 export interface ServerConfig {
-  /** Nom du serveur */
+  /** Server name */
   name: string;
-  /** Version du serveur */
+  /** Server version */
   version: string;
-  /** Logger personnalisé (optionnel) */
+  /** Custom logger (optional) */
   logger?: Logger;
-  /** Options de transport */
+  /** Transport options */
   transport?: TransportConfig;
-  /** Plugins à charger au démarrage */
+  /** Plugins to load at startup */
   plugins?: Plugin[];
 }
 
 /**
- * Configuration du transport
+ * Transport Configuration
  */
 export interface TransportConfig {
-  /** Type de transport */
+  /** Transport type */
   type: 'stdio' | 'http' | 'websocket' | 'sse';
-  /** Port pour HTTP/WebSocket/SSE */
+  /** Port for HTTP/WebSocket/SSE */
   port?: number;
-  /** Hôte pour HTTP/WebSocket/SSE */
+  /** Host for HTTP/WebSocket/SSE */
   host?: string;
-  /** Options supplémentaires */
-  options?: Record<string, unknown>;
+  /** Additional options */
+  options?: Metadata;
 }
 
 /**
- * Interface de logger personnalisable
+ * Customizable logger interface
  */
 export interface Logger {
-  info(message: string, meta?: Record<string, unknown>): void;
-  warn(message: string, meta?: Record<string, unknown>): void;
-  error(message: string, error?: Error, meta?: Record<string, unknown>): void;
-  debug(message: string, meta?: Record<string, unknown>): void;
+  info(message: string, meta?: Metadata): void;
+  warn(message: string, meta?: Metadata): void;
+  error(message: string, error?: Error, meta?: Metadata): void;
+  debug(message: string, meta?: Metadata): void;
 }
 
 /**
- * Définition d'un outil MCP avec validation Zod
+ * MCP Tool definition with Zod validation
  */
-export interface Tool<I = unknown, O = unknown> {
-  /** Nom unique de l'outil */
+export interface Tool<TInput = unknown, TOutput = unknown> {
+  /** Unique tool name */
   name: string;
-  /** Description de l'outil */
+  /** Tool description */
   description: string;
-  /** Schéma de validation des entrées avec Zod */
-  inputSchema: z.ZodType<I>;
-  /** Handler métier asynchrone */
-  handler: ToolHandler<I, O>;
-  /** Métadonnées supplémentaires */
-  metadata?: Record<string, unknown>;
+  /** Input validation schema with Zod */
+  inputSchema: z.ZodType<TInput>;
+  /** Async business logic handler */
+  handler: ToolHandler<TInput, TOutput>;
+  /** Additional metadata */
+  metadata?: Metadata;
 }
 
 /**
- * Handler d'un outil
+ * Tool handler with strict typing
  */
-export type ToolHandler<I = unknown, O = unknown> = (
-  input: I,
+export type ToolHandler<TInput = unknown, TOutput = unknown> = (
+  input: TInput,
   context: ToolContext
-) => Promise<O>;
+) => Promise<TOutput>;
 
 /**
- * Contexte d'exécution d'un outil
+ * Tool execution context
  */
-export interface ToolContext {
-  /** ID du client qui a fait la requête */
+export interface ToolContext<TMetadata extends Metadata = StrictMetadata> {
+  /** Client ID that made the request */
   clientId: string;
-  /** Métadonnées de la requête */
-  metadata?: Record<string, unknown>;
-  /** Logger pour cet outil */
+  /** Request metadata (typed) */
+  metadata: TMetadata;
+  /** Logger for this tool */
   logger: Logger;
 }
 
 /**
- * Message MCP standard
+ * Standard MCP message with generic typing
  */
-export interface MCPMessage {
-  /** Type de message */
+export interface MCPMessage<TParams = unknown, TResult = unknown> {
+  /** Message type */
   type: 'request' | 'response' | 'error' | 'event';
-  /** ID du message (pour corréler requête/réponse) */
+  /** Message ID (to correlate request/response) */
   id?: string;
-  /** Méthode ou événement */
+  /** Method or event name */
   method?: string;
-  /** Paramètres ou données */
-  params?: unknown;
-  /** Résultat (pour réponse) */
-  result?: unknown;
-  /** Erreur (pour erreur) */
+  /** Parameters or data */
+  params?: TParams;
+  /** Result (for response) */
+  result?: TResult;
+  /** Error (for error) */
   error?: MCPError;
 }
 
 /**
- * Erreur MCP standard
+ * Typed MCP Request
  */
-export interface MCPError {
-  /** Code d'erreur */
-  code: number;
-  /** Message d'erreur */
-  message: string;
-  /** Données supplémentaires */
-  data?: unknown;
+export interface MCPRequest<TParams = unknown> extends MCPMessage<TParams, never> {
+  type: 'request';
+  method: string;
+  params?: TParams;
 }
 
 /**
- * Interface de transport abstrait
+ * Typed MCP Response
+ */
+export interface MCPResponse<TResult = unknown> extends MCPMessage<never, TResult> {
+  type: 'response';
+  id: string;
+  result: TResult;
+}
+
+/**
+ * Typed MCP Event
+ */
+export interface MCPEvent<TData = unknown> extends MCPMessage<TData, never> {
+  type: 'event';
+  method: string;
+  params: TData;
+}
+
+/**
+ * Standard MCP Error
+ */
+export interface MCPError<TData = unknown> {
+  /** Error code */
+  code: number;
+  /** Error message */
+  message: string;
+  /** Additional data */
+  data?: TData;
+}
+
+/**
+ * Abstract transport interface
  */
 export interface Transport {
-  /** Nom du transport */
+  /** Transport name */
   name: string;
-  /** Démarre le transport */
+  /** Start the transport */
   start(): Promise<void>;
-  /** Arrête le transport */
+  /** Stop the transport */
   stop(): Promise<void>;
-  /** Envoie un message à un client */
+  /** Send a message to a client */
   send(clientId: string, message: MCPMessage): Promise<void>;
-  /** Broadcast un message à tous les clients */
+  /** Broadcast a message to all clients */
   broadcast(message: MCPMessage): Promise<void>;
-  /** Événement lors de la réception d'un message */
+  /** Event handler for received messages */
   onMessage(handler: MessageHandler): void;
-  /** Événement lors de la connexion d'un client */
+  /** Event handler for client connections */
   onConnect(handler: ConnectHandler): void;
-  /** Événement lors de la déconnexion d'un client */
+  /** Event handler for client disconnections */
   onDisconnect(handler: DisconnectHandler): void;
 }
 
 /**
- * Handler de message
+ * Message handler
  */
 export type MessageHandler = (clientId: string, message: MCPMessage) => void | Promise<void>;
 
 /**
- * Handler de connexion
+ * Connection handler
  */
 export type ConnectHandler = (clientId: string) => void | Promise<void>;
 
 /**
- * Handler de déconnexion
+ * Disconnection handler
  */
 export type DisconnectHandler = (clientId: string) => void | Promise<void>;
 
 /**
- * Plugin pour étendre le serveur
+ * Plugin to extend the server
  */
 export interface Plugin {
-  /** Nom du plugin */
+  /** Plugin name */
   name: string;
-  /** Version du plugin */
+  /** Plugin version */
   version: string;
-  /** Priorité d'exécution (plus élevé = plus tôt) */
+  /** Execution priority (higher = earlier) */
   priority?: number;
-  /** Initialisation du plugin */
+  /** Plugin initialization */
   initialize(server: MCPServerInterface): Promise<void> | void;
-  /** Nettoyage lors de la désactivation */
+  /** Cleanup on deactivation */
   cleanup?(): Promise<void> | void;
 }
 
 /**
- * Interface du serveur MCP (pour plugins et extensions)
+ * MCP Server interface (for plugins and extensions)
  */
 export interface MCPServerInterface {
-  /** Configuration du serveur */
+  /** Server configuration */
   config: ServerConfig;
-  /** Logger du serveur */
+  /** Server logger */
   logger: Logger;
-  /** Enregistre un outil */
-  registerTool<I = unknown, O = unknown>(tool: Tool<I, O>): void;
-  /** Retire un outil */
+  /** Register a tool */
+  registerTool<TInput = unknown, TOutput = unknown>(tool: Tool<TInput, TOutput>): void;
+  /** Unregister a tool */
   unregisterTool(name: string): void;
-  /** Liste tous les outils */
+  /** List all tools */
   listTools(): Tool[];
-  /** Enregistre un hook lifecycle */
+  /** Register a lifecycle hook */
   registerHook(hook: LifecycleHook): void;
-  /** Enregistre un middleware */
+  /** Register a middleware */
   registerMiddleware(middleware: Middleware): void;
-  /** Obtient le transport actuel */
+  /** Get current transport */
   getTransport(): Transport | null;
-  /** Change le transport */
+  /** Set transport */
   setTransport(transport: Transport): Promise<void>;
 }
 
@@ -197,83 +261,149 @@ export enum HookPhase {
   OnClientDisconnect = 'onClientDisconnect',
   BeforeToolExecution = 'beforeToolExecution',
   AfterToolExecution = 'afterToolExecution',
+  OnError = 'onError',
+  OnRequest = 'onRequest',
+  OnResponse = 'onResponse',
 }
 
 /**
  * Lifecycle hook
  */
-export interface LifecycleHook {
+export interface LifecycleHook<TContext extends HookContext = HookContext> {
   /** Hook name */
   name: string;
   /** Lifecycle phase */
   phase: HookPhase;
   /** Hook handler */
-  handler: HookHandler;
+  handler: HookHandler<TContext>;
 }
 
 /**
- * Handler de hook
+ * Hook handler
  */
-export type HookHandler = (context: HookContext) => void | Promise<void>;
+export type HookHandler<TContext extends HookContext = HookContext> = (
+  context: TContext
+) => void | Promise<void>;
 
 /**
- * Contexte de hook
+ * Hook context with generic typing
  */
-export interface HookContext {
-  /** Type d'événement */
+export interface HookContext<TData = unknown, TMetadata extends Metadata = StrictMetadata> {
+  /** Event type */
   event: string;
-  /** Données associées */
-  data?: unknown;
-  /** Client concerné (si applicable) */
+  /** Associated data (typed) */
+  data?: TData;
+  /** Related client (if applicable) */
   clientId?: string;
-  /** Outil concerné (si applicable) */
+  /** Related tool (if applicable) */
   toolName?: string;
+  /** Execution duration in ms (if applicable) */
+  duration?: number;
+  /** Error (if applicable) */
+  error?: Error;
+  /** Request message (if applicable) */
+  request?: MCPMessage;
+  /** Response message (if applicable) */
+  response?: MCPMessage;
+  /** Start timestamp */
+  startTime?: number;
+  /** Additional metadata for observability */
+  metadata?: TMetadata;
 }
 
 /**
- * Middleware pour traiter les messages
+ * Specific contexts for each phase
+ * These types provide better auto-completion for hooks
  */
-export interface Middleware {
-  /** Nom du middleware */
+export interface ToolExecutionContext<TData = unknown> extends HookContext<TData> {
+  toolName: string;
+  startTime: number;
+}
+
+export interface ClientConnectionContext extends HookContext {
+  clientId: string;
+}
+
+export interface ErrorContext extends HookContext {
+  error: Error;
+}
+
+/**
+ * Middleware for processing messages
+ */
+export interface Middleware<TMetadata extends Metadata = StrictMetadata> {
+  /** Middleware name */
   name: string;
-  /** Priorité d'exécution */
+  /** Execution priority */
   priority?: number;
-  /** Handler du middleware */
-  handler: MiddlewareHandler;
+  /** Middleware handler */
+  handler: MiddlewareHandler<TMetadata>;
 }
 
 /**
- * Handler de middleware
+ * Middleware handler
  */
-export type MiddlewareHandler = (
+export type MiddlewareHandler<TMetadata extends Metadata = StrictMetadata> = (
   message: MCPMessage,
-  context: MiddlewareContext,
+  context: MiddlewareContext<TMetadata>,
   next: () => Promise<void>
 ) => Promise<void>;
 
 /**
- * Contexte de middleware
+ * Middleware context with generic typing
  */
-export interface MiddlewareContext {
-  /** ID du client */
+export interface MiddlewareContext<TMetadata extends Metadata = StrictMetadata> {
+  /** Client ID */
   clientId: string;
   /** Logger */
   logger: Logger;
-  /** Métadonnées */
-  metadata?: Record<string, unknown>;
+  /** Typed metadata */
+  metadata: TMetadata;
 }
 
 /**
- * Résultat d'exécution d'un outil
+ * Tool execution result
  */
-export interface ToolExecutionResult<O = unknown> {
-  /** Succès ou échec */
+export interface ToolExecutionResult<TOutput = unknown> {
+  /** Success or failure */
   success: boolean;
-  /** Résultat (si succès) */
-  result?: O;
-  /** Erreur (si échec) */
+  /** Result (if success) */
+  result?: TOutput;
+  /** Error (if failure) */
   error?: MCPError;
-  /** Durée d'exécution en ms */
+  /** Execution duration in ms */
   duration: number;
 }
 
+/**
+ * Helper types to improve ergonomics
+ */
+
+/**
+ * Extract input type from Tool
+ */
+export type InferToolInput<T extends Tool<any, any>> = 
+  T extends Tool<infer I, any> ? I : never;
+
+/**
+ * Extract output type from Tool
+ */
+export type InferToolOutput<T extends Tool<any, any>> = 
+  T extends Tool<any, infer O> ? O : never;
+
+/**
+ * Type-safe tool registration helper
+ */
+export type TypedTool<TInput, TOutput> = Tool<TInput, TOutput>;
+
+/**
+ * Type-safe middleware registration helper
+ */
+export type TypedMiddleware<TMetadata extends Metadata = StrictMetadata> = 
+  Middleware<TMetadata>;
+
+/**
+ * Type-safe hook registration helper
+ */
+export type TypedHook<TContext extends HookContext = HookContext> = 
+  LifecycleHook<TContext>;

@@ -1,0 +1,33 @@
+{
+  "name": "@mcp-accelerator/middleware-ratelimit",
+  "version": "1.0.0",
+  "description": "Rate limiting middleware for MCP Accelerator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "middleware",
+    "rate-limit",
+    "throttle",
+    "quota",
+    "security",
+    "mcp-accelerator"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mcp-accelerator/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

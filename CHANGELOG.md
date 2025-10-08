@@ -8,6 +8,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Security Packages** 🔒
+  - `@mcp-accelerator/middleware-auth`: JWT & API Key authentication
+  - `@mcp-accelerator/middleware-ratelimit`: Rate limiting & quotas (in-memory + Redis)
+  - `@mcp-accelerator/middleware-cors`: CORS configuration helpers
+- Secure API example demonstrating production-grade security patterns
+- `SECURITY_PACKAGES.md`: Comprehensive security guide
+- Support for layered security architecture (auth + rate limiting + authorization)
+
+### Documentation
+- **All documentation translated to English** (code comments, guides, READMEs)
+- Added security best practices guide
+- Updated README with security packages section
+- Created secure-api example with complete documentation
+- Created `TESTING_GUIDE.md` for comprehensive testing documentation
+- Created `TYPESCRIPT_ERGONOMICS.md` for type usage guide
+
+### Observability
+- **New Package**: `@mcp-accelerator/middleware-observability` with OpenTelemetry
+- Added 3 new lifecycle hook phases: `OnError`, `OnRequest`, `OnResponse`
+- Enhanced `HookContext` with observability fields (duration, startTime, error, etc.)
+- Full distributed tracing support (Jaeger, Zipkin, OTLP)
+- Metrics collection (Prometheus, OTLP)
+- Structured logging with OpenTelemetry
+- Zero-config presets for dev/prod/self-hosted
+
+### Testing & CI/CD
+- Fixed Jest configuration for monorepo (multi-project setup)
+- Added 47 unit tests (core + middleware resilience)
+- Achieved 70% test coverage
+- Created GitHub Actions CI pipeline:
+  - Tests on Node 18.x, 20.x, 21.x
+  - Linting and type-checking
+  - Security audits (npm audit, Snyk)
+  - Coverage reporting (Codecov)
+- Created GitHub Actions publish pipeline (automated npm publishing)
+- Added test scripts: `test`, `test:watch`, `test:ci`
+- Created `TESTING_GUIDE.md` with best practices
+- Coverage badges in README
+
+### TypeScript Ergonomics
+- Improved type safety across the entire API
+- Replaced `Record<string, unknown>` with typed `Metadata` and `StrictMetadata`
+- Added generic types to `Tool<TInput, TOutput>`
+- Added generic types to `MCPMessage<TParams, TResult>`
+- Created specialized message types: `MCPRequest`, `MCPResponse`, `MCPEvent`
+- Added generic types to `Middleware<TMetadata>` and `HookContext<TData, TMetadata>`
+- Created helper types: `InferToolInput`, `InferToolOutput`, `TypedTool`, `TypedMiddleware`
+- Removed `any` from example plugins
+- Full IntelliSense support for metadata fields
+- Type-safe context in all handlers
+
+### Resilience & Production-Ready Transports
+- **New Package**: `@mcp-accelerator/middleware-resilience`
+  - Circuit Breaker pattern
+  - Timeout with per-tool configuration
+  - Retry with exponential backoff
+  - Bulkhead (concurrency limiting)
+- **Enhanced HTTP Transport**:
+  - Request/connection/keep-alive timeouts
+  - Body size limits (1MB default)
+  - Concurrency control with queue management
+  - Backpressure protection
+  - Circuit breaker support
+  - Health & metrics endpoints
+- **Enhanced WebSocket Transport**:
+  - Heartbeat/ping-pong mechanism
+  - Idle timeout detection
+  - Per-client rate limiting
+  - Message size limits
+  - Backpressure control (high water mark)
+  - Connection capacity limits
+  - Automatic cleanup of zombie connections
+
+### Added
 - Initial modular monorepo architecture
 - Split into 5 packages: core + 4 transports
 - HookPhase enum for type-safe lifecycle hooks

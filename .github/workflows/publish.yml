@@ -1,0 +1,111 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build all packages
+        run: npm run build
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Publish @mcp-accelerator/core
+        working-directory: ./packages/core
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/transport-stdio
+        working-directory: ./packages/transport-stdio
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/transport-http
+        working-directory: ./packages/transport-http
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/transport-websocket
+        working-directory: ./packages/transport-websocket
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/transport-sse
+        working-directory: ./packages/transport-sse
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/middleware-auth
+        working-directory: ./packages/middleware-auth
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/middleware-ratelimit
+        working-directory: ./packages/middleware-ratelimit
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/middleware-cors
+        working-directory: ./packages/middleware-cors
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/middleware-resilience
+        working-directory: ./packages/middleware-resilience
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish @mcp-accelerator/middleware-observability
+        working-directory: ./packages/middleware-observability
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Create GitHub Release Notes
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## Published Packages
+            
+            - @mcp-accelerator/core
+            - @mcp-accelerator/transport-stdio
+            - @mcp-accelerator/transport-http
+            - @mcp-accelerator/transport-websocket
+            - @mcp-accelerator/transport-sse
+            - @mcp-accelerator/middleware-auth
+            - @mcp-accelerator/middleware-ratelimit
+            - @mcp-accelerator/middleware-cors
+            - @mcp-accelerator/middleware-resilience
+            - @mcp-accelerator/middleware-observability
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.

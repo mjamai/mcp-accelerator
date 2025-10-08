@@ -1,0 +1,35 @@
+{
+  "name": "@mcp-accelerator/middleware-cors",
+  "version": "1.0.0",
+  "description": "CORS middleware for MCP Accelerator HTTP/SSE transports",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "middleware",
+    "cors",
+    "security",
+    "http",
+    "mcp-accelerator"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mcp-accelerator/core": "^1.0.0"
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.4.2"
+  },
+  "devDependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

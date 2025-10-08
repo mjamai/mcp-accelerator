@@ -1,0 +1,17 @@
+{
+  "name": "mcp-secure-api-example",
+  "version": "1.0.0",
+  "description": "Production-ready secure MCP API with authentication and rate limiting",
+  "main": "index.ts",
+  "scripts": {
+    "start": "node index.ts"
+  },
+  "dependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@mcp-accelerator/transport-http": "^1.0.0",
+    "@mcp-accelerator/middleware-auth": "^1.0.0",
+    "@mcp-accelerator/middleware-ratelimit": "^1.0.0",
+    "zod": "^3.22.4",
+    "dotenv": "^16.3.1"
+  }
+}

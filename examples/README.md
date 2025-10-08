@@ -33,7 +33,35 @@ Each example requires specific package installations. Install only what you need
 
 ## 🚀 Available Examples
 
-### 1. Basic STDIO ([basic-stdio/](basic-stdio/))
+### 1. Secure API ([secure-api/](secure-api/)) 🔒 **NEW!**
+
+Production-ready secure API with authentication, rate limiting, and authorization.
+
+**Features:**
+- Dual authentication (JWT + API Keys)
+- Layered rate limiting (global + per-user)
+- Custom authorization (RBAC)
+- Environment-based configuration
+
+**Installation:**
+```bash
+cd secure-api
+npm install @mcp-accelerator/core @mcp-accelerator/transport-http \
+  @mcp-accelerator/middleware-auth @mcp-accelerator/middleware-ratelimit \
+  zod dotenv
+cp .env.example .env  # Configure your secrets
+```
+
+**Run:**
+```bash
+node index.ts
+```
+
+**Use Case:** Production APIs, SaaS platforms, multi-tenant systems
+
+---
+
+### 2. Basic STDIO ([basic-stdio/](basic-stdio/))
 
 Simple CLI server using stdin/stdout.
 
@@ -54,7 +82,7 @@ node index.ts
 
 ---
 
-### 2. HTTP API ([http-api/](http-api/))
+### 3. HTTP API ([http-api/](http-api/))
 
 HTTP/REST server with data processing tools.
 
@@ -98,7 +126,7 @@ curl -X POST http://localhost:3000/mcp \
 
 ---
 
-### 3. WebSocket Server ([websocket-server/](websocket-server/))
+### 4. WebSocket Server ([websocket-server/](websocket-server/))
 
 Real-time calculator server with WebSocket.
 
@@ -150,7 +178,7 @@ ws.on('message', (data) => {
 
 ---
 
-### 4. Custom Plugin ([custom-plugin/](custom-plugin/))
+### 5. Custom Plugin ([custom-plugin/](custom-plugin/))
 
 Example of creating a custom plugin.
 

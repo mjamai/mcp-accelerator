@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![CI](https://github.com/USERNAME/MCraPid/workflows/CI/badge.svg)](https://github.com/USERNAME/MCraPid/actions)
+[![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen.svg)](./coverage)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 A modern, modular, and high-performance framework for building **Model Context Protocol (MCP)** servers in TypeScript.
@@ -155,6 +157,8 @@ await server.start();
 
 MCP Accelerator is organized into several modular packages:
 
+### Core & Transports
+
 | Package | Description | Size | Dependencies |
 |---------|-------------|------|--------------|
 | [`@mcp-accelerator/core`](packages/core) | 🎯 Core package with server and types | Lightweight | zod |
@@ -162,6 +166,28 @@ MCP Accelerator is organized into several modular packages:
 | [`@mcp-accelerator/transport-http`](packages/transport-http) | 🌐 HTTP/REST server | ~2 MB | fastify |
 | [`@mcp-accelerator/transport-websocket`](packages/transport-websocket) | 🔌 WebSocket communication | ~1 MB | ws |
 | [`@mcp-accelerator/transport-sse`](packages/transport-sse) | 📡 Server-Sent Events | ~2 MB | fastify |
+
+### Security Middleware (Optional)
+
+| Package | Description | Use Case |
+|---------|-------------|----------|
+| [`@mcp-accelerator/middleware-auth`](packages/middleware-auth) | 🔐 JWT & API Key authentication | Secure APIs |
+| [`@mcp-accelerator/middleware-ratelimit`](packages/middleware-ratelimit) | ⏱️ Rate limiting & quotas | Prevent abuse |
+| [`@mcp-accelerator/middleware-cors`](packages/middleware-cors) | 🌐 CORS configuration | Browser clients |
+
+### Resilience Middleware (Optional)
+
+| Package | Description | Use Case |
+|---------|-------------|----------|
+| [`@mcp-accelerator/middleware-resilience`](packages/middleware-resilience) | 🛡️ Circuit breaker, timeout, retry, bulkhead | Production stability |
+
+### Observability Middleware (Optional)
+
+| Package | Description | Use Case |
+|---------|-------------|----------|
+| [`@mcp-accelerator/middleware-observability`](packages/middleware-observability) | 🔍 OpenTelemetry tracing, metrics & logs | Production monitoring |
+
+> **Note**: Middleware packages are optional. Install only what you need for your use case.
 
 ## 🎯 Core Concepts
 
@@ -292,6 +318,135 @@ Check the [`examples/`](examples/) folder for complete examples:
 - [HTTP API](examples/http-api/) - REST API
 - [WebSocket Server](examples/websocket-server/) - Real-time server
 - [Custom Plugin](examples/custom-plugin/) - Create a custom plugin
+
+## 🔒 Production Security
+
+MCP Accelerator provides **optional security packages** for production deployments:
+
+### Quick Security Setup
+
+```typescript
+import { MCPServer } from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
+import { createJWTAuthMiddleware } from '@mcp-accelerator/middleware-auth';
+import { createRateLimitMiddleware } from '@mcp-accelerator/middleware-ratelimit';
+
+const server = new MCPServer({ name: 'secure-api', version: '1.0.0' });
+server.setTransport(new HttpTransport({ port: 3000 }));
+
+// Add authentication
+server.registerMiddleware(createJWTAuthMiddleware({
+  secret: process.env.JWT_SECRET!
+}));
+
+// Add rate limiting
+server.registerMiddleware(createRateLimitMiddleware({
+  max: 100,
+  windowMs: 60 * 1000
+}));
+
+await server.start();
+```
+
+**Learn more**: See [Security Packages Guide](docs/SECURITY_PACKAGES.md) for complete security guide.
+
+## 🔍 Production Observability
+
+MCP Accelerator includes **OpenTelemetry support** for full-stack observability:
+
+### Quick Observability Setup
+
+```typescript
+import { MCPServer } from '@mcp-accelerator/core';
+import {
+  initializeObservability,
+  createTracingMiddleware,
+  createMetricsHooks,
+  createOTelLogger,
+} from '@mcp-accelerator/middleware-observability';
+
+// Initialize OpenTelemetry (Jaeger + Prometheus)
+await initializeObservability({
+  serviceName: 'my-mcp-server',
+  traceExporter: 'jaeger',
+  metricsExporter: 'prometheus',
+  prometheusPort: 9464
+});
+
+// Create server with observability
+const logger = createOTelLogger({ serviceName: 'my-mcp-server' });
+const server = new MCPServer({ name: 'my-server', version: '1.0.0', logger });
+
+// Add tracing
+server.registerMiddleware(createTracingMiddleware());
+
+// Add metrics
+createMetricsHooks().forEach(hook => server.registerHook(hook));
+
+await server.start();
+```
+
+**Includes:**
+- ✅ Distributed tracing (Jaeger, Zipkin, OTLP)
+- ✅ Metrics collection (Prometheus, OTLP)
+- ✅ Structured logging (OpenTelemetry Logs)
+- ✅ Auto-instrumentation
+
+**Learn more**: See the [Observability Package README](packages/middleware-observability/README.md).
+
+## 🎨 TypeScript Ergonomics
+
+MCP Accelerator est conçu pour une **expérience développeur exceptionnelle** avec TypeScript :
+
+```typescript
+import { z } from '@mcp-accelerator/core';
+
+// ✅ Types inférés automatiquement depuis Zod
+const inputSchema = z.object({
+  name: z.string(),
+  age: z.number(),
+});
+
+type Input = z.infer<typeof inputSchema>;
+
+server.registerTool<Input, { result: string }>({
+  name: 'my-tool',
+  description: 'Fully typed tool',
+  inputSchema,
+  handler: async (input, context) => {
+    // ✅ input.name - Auto-complétion complète!
+    // ✅ input.age - Type-safe!
+    // ✅ context.metadata.user - Typé avec StrictMetadata!
+    
+    console.log(input.name);  // string
+    console.log(context.metadata.user?.id);  // string | undefined
+    
+    return { result: `Hello ${input.name}` };
+  },
+});
+```
+
+**Features:**
+- ✅ Types génériques pour Tools, Middleware, Hooks
+- ✅ `StrictMetadata` pour auto-complétion des métadonnées
+- ✅ `MCPRequest<T>`, `MCPResponse<T>`, `MCPEvent<T>` typés
+- ✅ Helper types: `InferToolInput`, `InferToolOutput`, `TypedTool`
+- ✅ Plus de `any` dans l'API publique
+
+**Learn more**: See [TypeScript Ergonomics Guide](docs/TYPESCRIPT_ERGONOMICS.md).
+
+## 📚 Documentation
+
+Comprehensive guides are available in the [`docs/`](docs/) directory:
+
+| Guide | Description |
+|-------|-------------|
+| [Security Packages](docs/SECURITY_PACKAGES.md) | Production security guide (auth, rate limiting, CORS) |
+| [TypeScript Ergonomics](docs/TYPESCRIPT_ERGONOMICS.md) | Type-safe development guide |
+| [Testing Guide](docs/TESTING_GUIDE.md) | Testing best practices and CI/CD |
+| [Release Guide](docs/RELEASE_GUIDE.md) | How to release new versions |
+
+See [`docs/README.md`](docs/README.md) for complete documentation index.
 
 ## 🏗️ Monorepo Architecture
 

@@ -13,12 +13,20 @@
     "build:http": "npm run build -w @mcp-accelerator/transport-http",
     "build:websocket": "npm run build -w @mcp-accelerator/transport-websocket",
     "build:sse": "npm run build -w @mcp-accelerator/transport-sse",
+    "build:auth": "npm run build -w @mcp-accelerator/middleware-auth",
+    "build:ratelimit": "npm run build -w @mcp-accelerator/middleware-ratelimit",
+    "build:cors": "npm run build -w @mcp-accelerator/middleware-cors",
+    "build:observability": "npm run build -w @mcp-accelerator/middleware-observability",
+    "build:resilience": "npm run build -w @mcp-accelerator/middleware-resilience",
     "dev": "npm run dev --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules",
+    "test:ci": "jest --coverage --ci --maxWorkers=2",
+    "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules coverage",
     "lint": "eslint packages/**/src/**/*.ts",
-    "docs": "typedoc --out docs packages/core/src/index.ts"
+    "lint:fix": "eslint packages/**/src/**/*.ts --fix",
+    "docs": "typedoc --out docs packages/core/src/index.ts",
+    "prepare": "npm run build"
   },
   "keywords": [
     "mcp",

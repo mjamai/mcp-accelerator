@@ -1,0 +1,133 @@
+import { createCircuitBreakerMiddleware } from '../circuit-breaker';
+import { MCPMessage, MiddlewareContext, StrictMetadata, SilentLogger } from '@mcp-accelerator/core';
+
+describe('Circuit Breaker Middleware', () => {
+  let mockMessage: MCPMessage;
+  let mockContext: MiddlewareContext<StrictMetadata>;
+
+  beforeEach(() => {
+    mockMessage = {
+      type: 'request',
+      method: 'test',
+      id: '123',
+    };
+
+    mockContext = {
+      clientId: 'test-client',
+      logger: new SilentLogger(),
+      metadata: {} as StrictMetadata,
+    };
+  });
+
+  it('should pass through requests when circuit is closed', async () => {
+    const middleware = createCircuitBreakerMiddleware({
+      failureThreshold: 3,
+    });
+
+    const next = jest.fn().mockResolvedValue(undefined);
+    
+    await middleware.handler(mockMessage, mockContext, next);
+    
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should open circuit after failure threshold', async () => {
+    const middleware = createCircuitBreakerMiddleware({
+      failureThreshold: 3,
+      timeout: 1000,
+    });
+
+    const next = jest.fn().mockRejectedValue(new Error('Service error'));
+
+    // Fail 3 times to open circuit
+    for (let i = 0; i < 3; i++) {
+      try {
+        await middleware.handler(mockMessage, mockContext, next);
+      } catch (error) {
+        // Expected to fail
+      }
+    }
+
+    // Circuit should now be open - next request should fail immediately
+    await expect(
+      middleware.handler(mockMessage, mockContext, next)
+    ).rejects.toThrow('Circuit breaker is open');
+  });
+
+  it('should transition to half-open after timeout', async () => {
+    const middleware = createCircuitBreakerMiddleware({
+      failureThreshold: 2,
+      timeout: 100, // Short timeout for testing
+    });
+
+    const next = jest.fn().mockRejectedValue(new Error('Service error'));
+
+    // Open the circuit
+    for (let i = 0; i < 2; i++) {
+      try {
+        await middleware.handler(mockMessage, mockContext, next);
+      } catch (error) {}
+    }
+
+    // Wait for timeout
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Should allow one request (half-open state)
+    next.mockResolvedValueOnce(undefined);
+    await expect(
+      middleware.handler(mockMessage, mockContext, next)
+    ).resolves.not.toThrow();
+  });
+
+  it('should call onOpen callback', async () => {
+    const onOpen = jest.fn();
+    
+    const middleware = createCircuitBreakerMiddleware({
+      failureThreshold: 2,
+      onOpen,
+    });
+
+    const next = jest.fn().mockRejectedValue(new Error('Service error'));
+
+    // Trigger circuit open
+    for (let i = 0; i < 2; i++) {
+      try {
+        await middleware.handler(mockMessage, mockContext, next);
+      } catch (error) {}
+    }
+
+    expect(onOpen).toHaveBeenCalled();
+  });
+
+  it('should close circuit after successful requests in half-open state', async () => {
+    const onClose = jest.fn();
+    
+    const middleware = createCircuitBreakerMiddleware({
+      failureThreshold: 2,
+      successThreshold: 2,
+      timeout: 100,
+      onClose,
+    });
+
+    const next = jest.fn();
+
+    // Open circuit
+    next.mockRejectedValue(new Error('Error'));
+    for (let i = 0; i < 2; i++) {
+      try {
+        await middleware.handler(mockMessage, mockContext, next);
+      } catch (error) {}
+    }
+
+    // Wait for half-open
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Successful requests to close circuit
+    next.mockResolvedValue(undefined);
+    for (let i = 0; i < 2; i++) {
+      await middleware.handler(mockMessage, mockContext, next);
+    }
+
+    expect(onClose).toHaveBeenCalled();
+  });
+});

@@ -9,6 +9,7 @@ import {
   Middleware,
   MCPMessage,
   ToolContext,
+  StrictMetadata,
 } from '../types';
 import { ConsoleLogger } from './logger';
 import { ToolManager } from './tool-manager';
@@ -326,7 +327,7 @@ export class MCPServer implements MCPServerInterface {
       if (index >= this.middlewares.length) return;
 
       const middleware = this.middlewares[index++];
-      await middleware.handler(message, { clientId, logger: this.logger }, next);
+      await middleware.handler(message, { clientId, logger: this.logger, metadata: {} as StrictMetadata }, next);
     };
 
     await next();

@@ -16,7 +16,7 @@ describe('ToolManager', () => {
         name: 'test-tool',
         description: 'Test tool',
         inputSchema: z.object({ value: z.string() }),
-        handler: async (input) => ({ result: input.value }),
+        handler: async (input: any) => ({ result: input.value }),
       };
 
       toolManager.registerTool(tool);
@@ -167,6 +167,7 @@ describe('ToolManager', () => {
       const result = await toolManager.executeTool('double', { value: 5 }, {
         clientId: 'test',
         logger: new SilentLogger(),
+        metadata: {},
       });
 
       expect(result.success).toBe(true);
@@ -178,6 +179,7 @@ describe('ToolManager', () => {
       const result = await toolManager.executeTool('non-existent', {}, {
         clientId: 'test',
         logger: new SilentLogger(),
+        metadata: {},
       });
 
       expect(result.success).toBe(false);
@@ -200,6 +202,7 @@ describe('ToolManager', () => {
       const result = await toolManager.executeTool('test', {}, {
         clientId: 'test',
         logger: new SilentLogger(),
+        metadata: {},
       });
 
       expect(result.success).toBe(false);
@@ -221,6 +224,7 @@ describe('ToolManager', () => {
       const result = await toolManager.executeTool('error-tool', {}, {
         clientId: 'test',
         logger: new SilentLogger(),
+        metadata: {},
       });
 
       expect(result.success).toBe(false);

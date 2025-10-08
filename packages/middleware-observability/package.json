@@ -1,0 +1,45 @@
+{
+  "name": "@mcp-accelerator/middleware-observability",
+  "version": "1.0.0",
+  "description": "Observability middleware with OpenTelemetry support for MCP Accelerator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "middleware",
+    "observability",
+    "opentelemetry",
+    "tracing",
+    "metrics",
+    "logging",
+    "mcp-accelerator"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mcp-accelerator/core": "^1.0.0"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-node": "^0.45.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.39.4",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.45.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.45.1",
+    "@opentelemetry/exporter-jaeger": "^1.18.1",
+    "@opentelemetry/exporter-prometheus": "^0.45.1",
+    "@opentelemetry/resources": "^1.18.1",
+    "@opentelemetry/semantic-conventions": "^1.18.1"
+  },
+  "devDependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
