@@ -1,4 +1,4 @@
-import { Plugin, MCPServerInterface } from '../types';
+import { Plugin, MCPServerInterface, HookPhase } from '../types';
 
 /**
  * Example logging plugin that adds request/response logging
@@ -37,7 +37,7 @@ export class LoggingPlugin implements Plugin {
     // Add hooks for lifecycle events
     server.registerHook({
       name: 'log-client-connect',
-      phase: 'onClientConnect',
+      phase: HookPhase.OnClientConnect,
       handler: async (ctx) => {
         server.logger.info('Client connected', { clientId: ctx.data });
       },
@@ -45,7 +45,7 @@ export class LoggingPlugin implements Plugin {
 
     server.registerHook({
       name: 'log-client-disconnect',
-      phase: 'onClientDisconnect',
+      phase: HookPhase.OnClientDisconnect,
       handler: async (ctx) => {
         server.logger.info('Client disconnected', { clientId: ctx.data });
       },
@@ -77,7 +77,7 @@ export class MetricsPlugin implements Plugin {
     // Track tool executions
     server.registerHook({
       name: 'metrics-before-tool',
-      phase: 'beforeToolExecution',
+      phase: HookPhase.BeforeToolExecution,
       handler: async () => {
         this.metrics.toolExecutions++;
       },
@@ -85,7 +85,7 @@ export class MetricsPlugin implements Plugin {
 
     server.registerHook({
       name: 'metrics-after-tool',
-      phase: 'afterToolExecution',
+      phase: HookPhase.AfterToolExecution,
       handler: async (ctx: any) => {
         if (ctx.data?.result) {
           this.metrics.totalDuration += ctx.data.result.duration || 0;

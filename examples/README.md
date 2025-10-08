@@ -2,6 +2,31 @@
 
 This folder contains usage examples of MCP Accelerator with different transports.
 
+## 🧪 Testing Examples Locally (Before Publishing)
+
+To test examples locally before publishing to npm, use `npm link`:
+
+```bash
+# 1. Build all packages
+cd /path/to/MCraPid
+npm run build
+
+# 2. Link packages globally
+cd packages/core && npm link && cd ../..
+cd packages/transport-stdio && npm link && cd ../..
+cd packages/transport-http && npm link && cd ../..
+cd packages/transport-websocket && npm link && cd ../..
+cd packages/transport-sse && npm link && cd ../..
+
+# 3. In each example, link the packages
+cd examples/basic-stdio
+npm link @mcp-accelerator/core @mcp-accelerator/transport-stdio
+npm install zod
+
+# 4. Run the example
+node index.ts
+```
+
 ## 📦 Prerequisites
 
 Each example requires specific package installations. Install only what you need!
@@ -19,8 +44,7 @@ npm install @mcp-accelerator/core @mcp-accelerator/transport-stdio zod
 
 **Run:**
 ```bash
-npm run build
-node examples/basic-stdio/index.js
+node index.ts
 ```
 
 **Features:**
@@ -41,8 +65,7 @@ npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
 
 **Run:**
 ```bash
-npm run build
-node examples/http-api/index.js
+node index.ts
 ```
 
 **Test:**
@@ -86,8 +109,7 @@ npm install @mcp-accelerator/core @mcp-accelerator/transport-websocket zod
 
 **Run:**
 ```bash
-npm run build
-node examples/websocket-server/index.js
+node index.ts
 ```
 
 **Test client:**

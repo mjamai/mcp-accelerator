@@ -1,5 +1,11 @@
 # MCP Accelerator 🚀
 
+[![npm version](https://badge.fury.io/js/@mcp-accelerator%2Fcore.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 A modern, modular, and high-performance framework for building **Model Context Protocol (MCP)** servers in TypeScript.
 
 ## ✨ Features

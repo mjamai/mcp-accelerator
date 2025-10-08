@@ -1,0 +1,11 @@
+{
+  "name": "example-websocket-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "WebSocket server example for MCP Accelerator",
+  "scripts": {
+    "start": "node index.ts"
+  }
+}
+

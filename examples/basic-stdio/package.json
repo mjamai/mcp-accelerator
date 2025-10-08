@@ -1,0 +1,11 @@
+{
+  "name": "example-basic-stdio",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Basic STDIO example for MCP Accelerator",
+  "scripts": {
+    "start": "node index.ts"
+  }
+}
+
