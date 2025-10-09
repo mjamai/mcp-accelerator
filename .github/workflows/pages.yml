@@ -1,10 +1,15 @@
 name: GitHub Pages
 
 on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deployment'
+        required: false
+        default: 'Manual deployment'
   push:
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +24,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Print deployment info
+        run: |
+          echo "🚀 Deploying GitHub Pages"
+          echo "Trigger: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Reason: ${{ github.event.inputs.reason }}"
+          fi
+      
       - name: Checkout
         uses: actions/checkout@v4
 
