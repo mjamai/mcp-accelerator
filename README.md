@@ -1,7 +1,6 @@
 # MCP Accelerator 🚀
 
 [![npm version](https://img.shields.io/npm/v/@mcp-accelerator/core.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
-[![npm downloads](https://img.shields.io/npm/dm/@mcp-accelerator/core.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
 [![GitHub release](https://img.shields.io/github/v/release/mjfphp/mcrapid.svg)](https://github.com/mjfphp/mcrapid/releases/tag/v1.0.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
