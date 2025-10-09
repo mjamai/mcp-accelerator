@@ -68,6 +68,53 @@ export function isMCPError(obj: unknown): obj is MCPError {
 }
 
 /**
+ * Format validation errors for user-friendly display
+ */
+export function formatValidationError(zodError: unknown): MCPError {
+  // Check if it's a Zod error (duck typing to avoid importing zod here)
+  if (
+    typeof zodError === 'object' &&
+    zodError !== null &&
+    'errors' in zodError &&
+    Array.isArray((zodError as { errors: unknown[] }).errors)
+  ) {
+    const errors = (zodError as { errors: Array<{
+      path: (string | number)[];
+      message: string;
+      code: string;
+      received?: unknown;
+    }> }).errors;
+
+    const formattedIssues = errors.map(err => ({
+      field: err.path.join('.') || 'root',
+      message: err.message,
+      type: err.code,
+      received: 'received' in err ? err.received : undefined,
+    }));
+
+    const summary = formattedIssues
+      .map(issue => `${issue.field}: ${issue.message}`)
+      .join('; ');
+
+    return createMCPError(
+      MCPErrorCode.VALIDATION_ERROR,
+      `Validation failed: ${summary}`,
+      {
+        issues: formattedIssues,
+        count: formattedIssues.length,
+      }
+    );
+  }
+
+  // Fallback for non-Zod errors
+  return createMCPError(
+    MCPErrorCode.VALIDATION_ERROR,
+    'Validation failed',
+    zodError
+  );
+}
+
+/**
  * Error handler class for centralized error management
  */
 export class ErrorHandler {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Tool, ToolContext, Logger, ToolExecutionResult } from '../types';
-import { MCPErrorCode, createMCPError } from './error-handler';
+import { MCPErrorCode, createMCPError, formatValidationError } from './error-handler';
 
 /**
  * Tool manager handles registration, validation, and execution of tools
@@ -100,11 +100,7 @@ export class ToolManager {
       if (!validation.success) {
         return {
           success: false,
-          error: createMCPError(
-            MCPErrorCode.VALIDATION_ERROR,
-            'Input validation failed',
-            validation.error.errors
-          ),
+          error: formatValidationError(validation.error),
           duration: Date.now() - startTime,
         };
       }

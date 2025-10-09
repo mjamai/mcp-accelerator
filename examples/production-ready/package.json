@@ -1,0 +1,38 @@
+{
+  "name": "mcp-production-example",
+  "version": "1.0.0",
+  "description": "Production-ready MCP server example with TLS, auth, and observability",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsx index.ts",
+    "dev": "tsx watch index.ts",
+    "build": "tsc",
+    "generate-certs": "mkdir -p certs && openssl req -x509 -newkey rsa:4096 -keyout certs/key.pem -out certs/cert.pem -days 365 -nodes -subj '/CN=localhost'",
+    "test:client": "node test-client.js"
+  },
+  "keywords": [
+    "mcp",
+    "production",
+    "tls",
+    "auth",
+    "observability"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "dependencies": {
+    "@mcp-accelerator/core": "workspace:*",
+    "@mcp-accelerator/transport-http": "workspace:*",
+    "@mcp-accelerator/middleware-auth": "workspace:*",
+    "@mcp-accelerator/middleware-ratelimit": "workspace:*",
+    "@mcp-accelerator/middleware-cors": "workspace:*",
+    "@mcp-accelerator/middleware-observability": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "jsonwebtoken": "^9.0.2",
+    "@types/jsonwebtoken": "^9.0.5"
+  }
+}
+

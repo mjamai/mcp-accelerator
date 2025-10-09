@@ -14,7 +14,18 @@ export {
   toMCPError,
   isMCPError,
   ErrorHandler,
+  formatValidationError,
 } from './core/error-handler';
+
+// Safe handler utilities
+export {
+  safeHandler,
+  executeWithTimeout,
+  executeWithTimeoutAndSignal,
+  withRetry,
+  withCircuitBreaker,
+  SafeHandlerOptions,
+} from './core/safe-handler';
 
 // Base transport export
 export { BaseTransport } from './transports/base-transport';

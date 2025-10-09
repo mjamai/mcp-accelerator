@@ -201,7 +201,16 @@ export class MCPServer implements MCPServerInterface {
    * Handle incoming message
    */
   private async handleMessage(clientId: string, message: MCPMessage): Promise<void> {
+    const startTime = Date.now();
+    
     try {
+      // Execute OnRequest hooks
+      await this.executeHooks(HookPhase.OnRequest, {
+        clientId,
+        request: message,
+        startTime,
+      });
+
       // Run middlewares
       await this.runMiddlewares(clientId, message);
 
@@ -209,8 +218,36 @@ export class MCPServer implements MCPServerInterface {
       if (message.type === 'request') {
         await this.handleRequest(clientId, message);
       }
+
+      // Execute OnResponse hooks (success)
+      const duration = Date.now() - startTime;
+      await this.executeHooks(HookPhase.OnResponse, {
+        clientId,
+        request: message,
+        duration,
+        startTime,
+      });
     } catch (error) {
+      const duration = Date.now() - startTime;
       this.logger.error('Error handling message', error as Error);
+      
+      // Execute OnError hooks
+      await this.executeHooks(HookPhase.OnError, {
+        clientId,
+        request: message,
+        error: error as Error,
+        duration,
+        startTime,
+      });
+
+      // Execute OnResponse hooks (error)
+      await this.executeHooks(HookPhase.OnResponse, {
+        clientId,
+        request: message,
+        error: error as Error,
+        duration,
+        startTime,
+      });
       
       // Send error response
       if (this.transport && message.id) {
