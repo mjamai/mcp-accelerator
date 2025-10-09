@@ -8,4 +8,5 @@ coverage/
 .idea/
 *.swp
 *.swo
+*.map
 # docs/ - Now using GitHub Pages
