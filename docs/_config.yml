@@ -1,0 +1,102 @@
+# GitHub Pages configuration for MCP Accelerator documentation
+# Using Jekyll with minimal configuration
+
+title: "MCP Accelerator"
+description: "Modern, modular, and high-performance framework for building MCP servers in TypeScript"
+version: "1.0.0"
+github_username: mjfphp
+github_repo: mcrapid
+
+# Theme configuration
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Site settings
+url: "https://mjfphp.github.io"
+baseurl: "/mcrapid"
+timezone: UTC
+
+# Navigation
+navigation:
+  - title: "Getting Started"
+    url: "/guides/getting-started"
+  - title: "Guides"
+    url: "/guides/"
+  - title: "API Reference"
+    url: "/api/"
+  - title: "Examples"
+    url: "/examples/"
+  - title: "Development"
+    url: "/development/"
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+
+# Exclude files from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+  - LICENSE
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+
+# Include files
+include:
+  - _redirects
+  - CNAME
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /guides/:name/
+  api:
+    output: true
+    permalink: /api/:name/
+  examples:
+    output: true
+    permalink: /examples/:name/
+  development:
+    output: true
+    permalink: /development/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "guide"
+  - scope:
+      path: ""
+      type: "api"
+    values:
+      layout: "api"
+  - scope:
+      path: ""
+      type: "examples"
+    values:
+      layout: "example"
+  - scope:
+      path: ""
+      type: "development"
+    values:
+      layout: "development"
