@@ -8,6 +8,7 @@
 [![CI](https://github.com/mjfphp/MCraPid/workflows/CI/badge.svg)](https://github.com/mjfphp/MCraPid/actions)
 [![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen.svg)](./coverage)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+<!-- trigger workflow -->
 
 > 🎉 **v1.0.0 Now Available on npm!** Install with: `npm install @mcp-accelerator/core`  
 > 📦 **10 packages published** | 🏢 [View on npm](https://www.npmjs.com/org/mcp-accelerator) | 🏷️ [Release Notes](https://github.com/mjfphp/mcrapid/releases/tag/v1.0.0)
