@@ -4,7 +4,20 @@ title: "MCP Accelerator Documentation"
 description: "Modern, modular, and high-performance framework for building MCP servers in TypeScript"
 ---
 
-Welcome to the comprehensive documentation for **MCP Accelerator** - a modern, modular, and high-performance framework for building Model Context Protocol (MCP) servers in TypeScript.
+<div class="hero-section">
+  <div class="hero-content">
+    <h1 class="hero-title">MCP Accelerator</h1>
+    <p class="hero-description">
+      Modern, modular, and high-performance framework for building Model Context Protocol (MCP) servers in TypeScript. 
+      Create robust, scalable servers with built-in authentication, observability, and multi-transport support.
+    </p>
+    <div class="hero-actions">
+      <a href="./guides/getting-started" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/mjfphp/mcrapid" class="btn btn-secondary" target="_blank">View on GitHub</a>
+      <a href="https://www.npmjs.com/org/mcp-accelerator" class="btn btn-secondary" target="_blank">View on npm</a>
+    </div>
+  </div>
+</div>
 
 ## 🎯 Quick Start
 
@@ -20,6 +33,46 @@ npx @mcp-accelerator/cli create my-server
 
 <div class="alert alert-info">
 <strong>🚀 New in v1.0.0:</strong> Production-ready middleware, enhanced error handling, and comprehensive observability features.
+</div>
+
+## ✨ Why Choose MCP Accelerator?
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">🚀</div>
+    <h3>High Performance</h3>
+    <p>Built for speed and scalability with optimized transports and efficient middleware pipeline.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">🔧</div>
+    <h3>Modular Architecture</h3>
+    <p>Use only what you need with a plugin-based architecture and independent package versions.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">🛡️</div>
+    <h3>Production Ready</h3>
+    <p>Built-in security, monitoring, error handling, and all the features you need for production.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">📱</div>
+    <h3>Multi-Transport</h3>
+    <p>HTTP, WebSocket, SSE, and STDIO transports with unified interface and easy switching.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">🔌</div>
+    <h3>Extensible</h3>
+    <p>Plugin system for custom functionality and comprehensive lifecycle hooks for observability.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">🎯</div>
+    <h3>TypeScript First</h3>
+    <p>Full type safety, IntelliSense support, and excellent developer experience out of the box.</p>
+  </div>
 </div>
 
 ## 📚 Documentation Sections
