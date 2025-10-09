@@ -1,10 +1,8 @@
 ---
-layout: default
+layout: page
 title: "MCP Accelerator Documentation"
 description: "Modern, modular, and high-performance framework for building MCP servers in TypeScript"
 ---
-
-# MCP Accelerator Documentation 🚀
 
 Welcome to the comprehensive documentation for **MCP Accelerator** - a modern, modular, and high-performance framework for building Model Context Protocol (MCP) servers in TypeScript.
 
@@ -19,6 +17,10 @@ npm install @mcp-accelerator/core
 # Create your first server
 npx @mcp-accelerator/cli create my-server
 ```
+
+<div class="alert alert-info">
+<strong>🚀 New in v1.0.0:</strong> Production-ready middleware, enhanced error handling, and comprehensive observability features.
+</div>
 
 ## 📚 Documentation Sections
 

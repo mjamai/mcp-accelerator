@@ -7,12 +7,12 @@ version: "1.0.0"
 github_username: mjfphp
 github_repo: mcrapid
 
-# Theme configuration
-theme: minima
+# Theme configuration - Custom design
 plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-seo-tag
+  - jekyll-redirect-from
 
 # Site settings
 url: "https://mjfphp.github.io"
