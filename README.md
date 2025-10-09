@@ -1,14 +1,30 @@
 # MCP Accelerator 🚀
 
-[![npm version](https://badge.fury.io/js/@mcp-accelerator%2Fcore.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
+[![npm version](https://img.shields.io/npm/v/@mcp-accelerator/core.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
+[![npm downloads](https://img.shields.io/npm/dm/@mcp-accelerator/core.svg)](https://www.npmjs.com/package/@mcp-accelerator/core)
+[![GitHub release](https://img.shields.io/github/v/release/mjfphp/mcrapid.svg)](https://github.com/mjfphp/mcrapid/releases/tag/v1.0.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![CI](https://github.com/USERNAME/MCraPid/workflows/CI/badge.svg)](https://github.com/USERNAME/MCraPid/actions)
-[![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen.svg)](./coverage)
+[![CI](https://github.com/mjfphp/MCraPid/workflows/CI/badge.svg)](https://github.com/mjfphp/MCraPid/actions)
+[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen.svg)](./coverage)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+> 🎉 **v1.0.0 Now Available on npm!** Install with: `npm install @mcp-accelerator/core`  
+> 📦 **10 packages published** | 🏢 [View on npm](https://www.npmjs.com/org/mcp-accelerator) | 🏷️ [Release Notes](https://github.com/mjfphp/mcrapid/releases/tag/v1.0.0)
+
 A modern, modular, and high-performance framework for building **Model Context Protocol (MCP)** servers in TypeScript.
+
+## 🆕 What's New in v1.0.0
+
+- 🛡️ **Safe Handler Utilities** - Automatic timeout, retry, and circuit breaker support
+- ✨ **Enhanced Error Messages** - User-friendly validation errors with field-level details
+- 📊 **Request/Response Hooks** - Full lifecycle observability for metrics and audit logging
+- 🚀 **Production Example** - Complete server with TLS, JWT auth, and rate limiting
+- 🧪 **Integration Tests** - 192 tests passing with comprehensive coverage
+- 📚 **Complete Documentation** - Production-ready guides and best practices
+
+[See full changelog →](./CHANGELOG.md) | [View examples →](./examples/)
 
 ## ✨ Features
 
