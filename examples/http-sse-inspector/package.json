@@ -1,0 +1,17 @@
+{
+  "name": "example-http-sse-inspector",
+  "private": true,
+  "description": "MCP server using SSE transport compatible with MCP Inspector",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@mcp-accelerator/transport-sse": "^1.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
