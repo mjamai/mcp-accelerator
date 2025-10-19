@@ -41,7 +41,7 @@ production-server/
 
 ```typescript
 import { MCPServer } from '@mcp-accelerator/core';
-import { HTTPTransport } from '@mcp-accelerator/transport-http';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
 import { JWTAuthMiddleware } from '@mcp-accelerator/middleware-auth';
 import { CORSMiddleware } from '@mcp-accelerator/middleware-cors';
 import { RateLimitMiddleware } from '@mcp-accelerator/middleware-ratelimit';
@@ -145,7 +145,7 @@ async function createProductionServer() {
   await registerTools(server);
 
   // Create HTTPS transport with TLS
-  const transport = new HTTPTransport({
+  const transport = new HttpTransport({
     port: serverConfig.port,
     host: serverConfig.host,
     serverOptions: {

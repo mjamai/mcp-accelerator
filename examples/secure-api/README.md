@@ -54,9 +54,10 @@ curl http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "type": "request",
-    "method": "tools/execute",
+    "method": "tools/call",
     "params": {
-      "name": "get-status"
+      "name": "get-status",
+      "arguments": {}
     }
   }'
 ```
@@ -111,10 +112,10 @@ curl http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "type": "request",
-    "method": "tools/execute",
+    "method": "tools/call",
     "params": {
       "name": "get-user-data",
-      "input": {
+      "arguments": {
         "fields": ["userId", "plan", "email"]
       }
     }
@@ -154,9 +155,10 @@ curl http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "type": "request",
-    "method": "tools/execute",
+    "method": "tools/call",
     "params": {
-      "name": "get-user-data"
+      "name": "get-user-data",
+      "arguments": {}
     }
   }'
 ```

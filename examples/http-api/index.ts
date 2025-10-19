@@ -19,10 +19,12 @@ async function main() {
     ],
   });
 
-  // Set HTTP transport
+  // Set HTTP transport with CORS enabled
   server.setTransport(new HttpTransport({
     host: '127.0.0.1',
     port: 3000,
+    enableCors: true,
+    corsOrigin: ['http://localhost:6274', 'http://127.0.0.1:6274'],
   }));
 
   // Text processing tool

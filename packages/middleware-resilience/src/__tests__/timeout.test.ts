@@ -55,8 +55,8 @@ describe('Timeout Middleware', () => {
 
     const toolMessage: MCPMessage = {
       type: 'request',
-      method: 'tools/execute',
-      params: { name: 'slow-tool' },
+      method: 'tools/call',
+      params: { name: 'slow-tool', arguments: {} },
     };
 
     const next = jest.fn().mockImplementation(() => {

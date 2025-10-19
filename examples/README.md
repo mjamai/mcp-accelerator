@@ -1,167 +1,204 @@
 # MCP Accelerator Examples
 
-This folder contains usage examples of MCP Accelerator with different transports.
+Practical scenarios that demonstrate how to build MCP-compliant servers with the latest tooling (`tools/call`, handshake negotiation, CLI scaffolding, observability, security).
 
-## 🧪 Testing Examples Locally (Before Publishing)
+---
 
-To test examples locally before publishing to npm, use `npm link`:
+## 🚀 Quick Start
 
 ```bash
-# 1. Build all packages
 cd /path/to/MCraPid
-npm run build
+npm install
+npm run build:core
 
-# 2. Link packages globally
-cd packages/core && npm link && cd ../..
-cd packages/transport-stdio && npm link && cd ../..
-cd packages/transport-http && npm link && cd ../..
-cd packages/transport-websocket && npm link && cd ../..
-cd packages/transport-sse && npm link && cd ../..
-
-# 3. In each example, link the packages
-cd examples/basic-stdio
-npm link @mcp-accelerator/core @mcp-accelerator/transport-stdio
-npm install zod
-
-# 4. Run the example
-node index.ts
+# Optional: link packages for local development
+npm link --workspaces
 ```
 
-## 📦 Prerequisites
+Inside any example:
 
-Each example requires specific package installations. Install only what you need!
-
-## 🚀 Available Examples
-
-### 1. Secure API ([secure-api/](secure-api/)) 🔒 **NEW!**
-
-Production-ready secure API with authentication, rate limiting, and authorization.
-
-**Features:**
-- Dual authentication (JWT + API Keys)
-- Layered rate limiting (global + per-user)
-- Custom authorization (RBAC)
-- Environment-based configuration
-
-**Installation:**
 ```bash
-cd secure-api
-npm install @mcp-accelerator/core @mcp-accelerator/transport-http \
-  @mcp-accelerator/middleware-auth @mcp-accelerator/middleware-ratelimit \
-  zod dotenv
-cp .env.example .env  # Configure your secrets
+cd examples/<example-name>
+npm install
+npm start
 ```
 
-**Run:**
-```bash
-node index.ts
-```
+All examples use the MCP-compliant flow:
 
-**Use Case:** Production APIs, SaaS platforms, multi-tenant systems
+1. Client sends `initialize` with `protocolVersion`.
+2. Server responds with negotiated capabilities.
+3. Client calls `tools/list` to discover tools.
+4. Tool execution uses `tools/call` with `{ name, arguments }`.
 
 ---
 
-### 2. Basic STDIO ([basic-stdio/](basic-stdio/))
+## 📂 Example Catalog
 
-Simple CLI server using stdin/stdout.
-
-**Installation:**
-```bash
-npm install @mcp-accelerator/core @mcp-accelerator/transport-stdio zod
-```
-
-**Run:**
-```bash
-node index.ts
-```
-
-**Features:**
-- ✅ Communication via stdin/stdout
-- ✅ Simple echo tool
-- ✅ No external dependencies
+| Example | Transport | Highlights |
+|---------|-----------|------------|
+| [basic-stdio](./basic-stdio) | STDIO | Minimal CLI server, lifecycle hooks, validation demos. |
+| [http-api](./http-api) | HTTP | REST-style MCP endpoint with multiple tools and logging plugins. |
+| [websocket-server](./websocket-server) | WebSocket | Real-time calculator, broadcast support, streaming responses. |
+| [secure-api](./secure-api) | HTTP | JWT & API key auth, layered rate limits, RBAC awareness. |
+| [production-ready](./production-ready) | HTTP + middleware | TLS-ready deployment blueprint with observability and CI tooling. |
+| [prompts](./prompts) | STDIO + resources | Prompt provider and resource catalogs for content workflows. |
+| [custom-plugin](./custom-plugin) | HTTP | Sample plugin with audit logging and custom middleware. |
 
 ---
 
-### 3. HTTP API ([http-api/](http-api/))
+## 🧪 Testing Examples Locally
 
-HTTP/REST server with data processing tools.
+### Use workspace builds (recommended)
 
-**Installation:**
 ```bash
-npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
+# From the repo root
+npm run build --workspaces
+
+# Run any example
+cd examples/http-api
+npm install
+npm start
 ```
 
-**Run:**
+### Alternative: link packages
+
 ```bash
-node index.ts
+# Link once from the repo root
+npm link --workspaces
+
+# Then inside each example
+npm link @mcp-accelerator/core @mcp-accelerator/transport-http
+npm install
+npm start
 ```
 
-**Test:**
-```bash
-# Health check
-curl http://localhost:3000/health
+---
 
-# Tool call
+## 🔌 MCP Request Templates
+
+### Initialize
+
+```jsonc
+{
+  "type": "request",
+  "id": "init-1",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "clientInfo": { "name": "client-demo", "version": "1.0.0" }
+  }
+}
+```
+
+### List tools
+
+```jsonc
+{
+  "type": "request",
+  "id": "tools-1",
+  "method": "tools/list"
+}
+```
+
+### Call a tool
+
+```jsonc
+{
+  "type": "request",
+  "id": "call-1",
+  "method": "tools/call",
+  "params": {
+    "name": "echo",
+    "arguments": {
+      "message": "Hello MCP!"
+    }
+  }
+}
+```
+
+### Receive response
+
+```jsonc
+{
+  "type": "response",
+  "id": "call-1",
+  "result": {
+    "content": [
+      { "type": "text", "text": "{\"echo\":\"Hello MCP!\"}" }
+    ]
+  }
+}
+```
+
+---
+
+## 🏗️ Skeleton Pattern
+
+```typescript
+import { MCPServer, z } from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
+
+const server = new MCPServer({
+  name: 'example-server',
+  version: '1.0.0',
+});
+
+server.setTransport(new HttpTransport({ port: 3000 }));
+
+server.registerTool({
+  name: 'echo',
+  description: 'Echo back input text',
+  inputSchema: z.object({ message: z.string() }),
+  handler: async (input, context) => ({
+    echoed: input.message,
+    clientId: context.clientId,
+  }),
+});
+
+await server.start();
+```
+
+---
+
+## 📝 Client Snippets
+
+### HTTP (curl)
+
+```bash
 curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "type": "request",
-    "id": "1",
-    "method": "tools/execute",
+    "id": "example",
+    "method": "tools/call",
     "params": {
       "name": "text-stats",
-      "input": {
+      "arguments": {
         "text": "Hello world! This is a test."
       }
     }
   }'
 ```
 
-**Features:**
-- ✅ REST API with Fastify
-- ✅ Text processing tools
-- ✅ JSON validation
-- ✅ Array operations
-- ✅ Logging and metrics plugins
+### WebSocket (Node.js)
 
----
-
-### 4. WebSocket Server ([websocket-server/](websocket-server/))
-
-Real-time calculator server with WebSocket.
-
-**Installation:**
-```bash
-npm install @mcp-accelerator/core @mcp-accelerator/transport-websocket zod
-```
-
-**Run:**
-```bash
-node index.ts
-```
-
-**Test client:**
 ```javascript
 const WebSocket = require('ws');
-const ws = new WebSocket('ws://localhost:3001');
+const ws = new WebSocket('ws://localhost:3001/mcp');
 
 ws.on('open', () => {
-  // Request tool list
   ws.send(JSON.stringify({
     type: 'request',
-    id: '1',
-    method: 'tools/list',
+    id: 'init',
+    method: 'initialize',
+    params: { protocolVersion: '2024-11-05' },
   }));
 
-  // Execute addition
   ws.send(JSON.stringify({
     type: 'request',
-    id: '2',
-    method: 'tools/execute',
-    params: {
-      name: 'add',
-      input: { a: 5, b: 3 }
-    }
+    id: 'call-1',
+    method: 'tools/call',
+    params: { name: 'add', arguments: { a: 2, b: 3 } },
   }));
 });
 
@@ -170,98 +207,18 @@ ws.on('message', (data) => {
 });
 ```
 
-**Features:**
-- ✅ Real-time bidirectional communication
-- ✅ Calculator with add, multiply, power
-- ✅ Broadcast messages to all clients
-- ✅ Support for multiple simultaneous clients
+---
+
+## ✅ Best Practices
+
+- Always send `initialize` before `tools/list` or `tools/call`.
+- Use `tools/call` with `arguments` rather than the deprecated `tools/execute`.
+- Keep example dependencies minimal; each project has its own `package.json`.
+- Run `npm run release:prepare` at the repo root to ensure lint/tests/audit pass before sharing examples.
 
 ---
 
-### 5. Custom Plugin ([custom-plugin/](custom-plugin/))
+Happy experimenting! If you build a new scenario that showcases transports, resources, or prompts, feel free to open a PR.
 
-Example of creating a custom plugin.
-
-**Installation:**
-```bash
-npm install @mcp-accelerator/core @mcp-accelerator/transport-http zod
-```
-
-**Features:**
-- ✅ Authentication plugin
-- ✅ Custom middleware
-- ✅ Lifecycle hooks
-- ✅ Reusable across projects
-
----
-
-## 🏗️ Example Structure
-
-Each example follows this structure:
-
-```typescript
-// 1. Import required packages
-import { MCPServer, z } from '@mcp-accelerator/core';
-import { HttpTransport } from '@mcp-accelerator/transport-http';
-
-// 2. Create server
-const server = new MCPServer({
-  name: 'my-server',
-  version: '1.0.0',
-});
-
-// 3. Configure transport
-server.setTransport(new HttpTransport({ port: 3000 }));
-
-// 4. Register tools
-server.registerTool({
-  name: 'my-tool',
-  description: 'My tool',
-  inputSchema: z.object({ /* ... */ }),
-  handler: async (input) => { /* ... */ },
-});
-
-// 5. Start server
-await server.start();
-```
-
-## 💡 Tips
-
-### Choosing the Right Transport
-
-- **STDIO**: CLI, scripts, integration with other processes
-- **HTTP**: REST APIs, standard web integration
-- **WebSocket**: Real-time, chat, push notifications
-- **SSE**: Unidirectional streaming, logs, events
-
-### Development
-
-For development, use watch mode:
-
-```bash
-# In the root directory
-npm run dev
-```
-
-This will automatically recompile all packages on changes.
-
-### Production
-
-For production, compile all packages:
-
-```bash
-npm run build
-```
-
-## 📚 Resources
-
-- [Main documentation](../README.md)
-- [Core Package](../packages/core/README.md)
-- [STDIO Transport](../packages/transport-stdio/README.md)
-- [HTTP Transport](../packages/transport-http/README.md)
-- [WebSocket Transport](../packages/transport-websocket/README.md)
-- [SSE Transport](../packages/transport-sse/README.md)
-
-## 🤝 Contributing
-
-Feel free to propose new examples via a Pull Request!
+### 6. HTTP SSE Inspector ([http-sse-inspector/](http-sse-inspector/))
+Compatible with MCP Inspector via legacy HTTP + SSE transport.

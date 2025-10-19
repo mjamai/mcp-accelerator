@@ -17,6 +17,9 @@ A modern, modular, and high-performance framework for building **Model Context P
 
 ## 🆕 What's New in v1.0.0
 
+- 🔄 **Protocol-Aware Handshake** - `ProtocolManager` negotiates MCP versions and advertises only supported capabilities
+- 🔐 **Dynamic Logging Control** - `logging/setLevel` now adjusts the active logger level at runtime
+- 📜 **Rich Tool Metadata** - Tools expose full JSON Schema definitions generated from Zod for client contract testing
 - 🛡️ **Safe Handler Utilities** - Automatic timeout, retry, and circuit breaker support
 - ✨ **Enhanced Error Messages** - User-friendly validation errors with field-level details
 - 📊 **Request/Response Hooks** - Full lifecycle observability for metrics and audit logging
@@ -36,6 +39,18 @@ A modern, modular, and high-performance framework for building **Model Context P
 - 📝 **Full TypeScript** - Complete type safety and IntelliSense
 - ⚡ **High Performance** - Optimized for speed and reliability
 - 🔄 **Interchangeable Transports** - Switch transports without code changes
+- 📁 **Resource Catalogs** - Expose documents through pluggable providers (in-memory, filesystem, custom)
+- 🗣️ **Structured Prompts** - Register prompt packs with placeholders ready for MCP clients
+- 🛡️ **Guarded Transports** - Optional bearer auth, quotas, and metrics across HTTP, WebSocket, and SSE
+
+## ✅ MCP Protocol Compliance Highlights
+
+- **Standards-based handshake** — `ProtocolManager` negotiates `initialize` requests, applies strict/backward compatibility policies, and returns the negotiated version.
+- **Capability gating** — the server advertises only the features it truly implements after intersecting negotiated vs. available capabilities.
+- **JSON Schema metadata** — `tools/list` returns detailed JSON schemas derived from your Zod definitions, ready for contract tests and client validation.
+- **Spec-compliant logging controls** — `logging/setLevel` updates the active logger in real time, aligning with the MCP logging capability.
+- **JSON-RPC guardrails** — every request envelope is validated before execution; malformed IDs or methods return standardized MCP errors.
+- **Change notifications** — `resources/updated` and `prompts/updated` events broadcast list changes to connected clients across STDIO and WebSocket transports.
 
 ## 📦 Installation
 
@@ -131,6 +146,25 @@ server.registerTool({
 await server.start();
 ```
 
+## 🛠 CLI Toolkit
+
+Accelerate project setup with the bundled CLI:
+
+```bash
+# Scaffold a tool, resource provider, and prompt provider
+npx mcp-accelerator generate tool echo-tool --description "Echo tool"
+npx mcp-accelerator generate resource filesystem
+npx mcp-accelerator generate provider onboarding --kind prompt
+
+# Generate tests only when you are adding coverage later
+npx mcp-accelerator generate test tool echo-tool --description "Echo tool"
+
+# Diagnose your project structure and dependencies
+npx mcp-accelerator doctor
+```
+
+The CLI writes TypeScript-first scaffolding aligned with the Model Context Protocol guidelines, keeps test stubs in sync, and refuses to overwrite files unless `--force` is provided.
+
 ### WebSocket Example
 
 ```typescript
@@ -168,6 +202,136 @@ server.registerTool({
 
 await server.start();
 ```
+
+## 📁 Resource Providers
+
+### Register an in-memory catalog
+
+```typescript
+import { MCPServer, InMemoryResourceProvider } from '@mcp-accelerator/core';
+
+const server = new MCPServer({ name: 'docs', version: '1.0.0' });
+
+server.registerResourceProvider(
+  new InMemoryResourceProvider('guides', 'Developer Guides', [
+    {
+      uri: 'memory://guides/getting-started',
+      name: 'getting-started.md',
+      mimeType: 'text/markdown',
+      data: '# Getting Started\nWelcome to your MCP server.',
+    },
+  ]),
+);
+```
+
+### Mount a filesystem directory
+
+```typescript
+import { FilesystemResourceProvider } from '@mcp-accelerator/core';
+import path from 'node:path';
+
+server.registerResourceProvider(
+  new FilesystemResourceProvider('docs', 'Project Docs', {
+    rootPath: path.join(process.cwd(), 'docs'),
+    maxDepth: 2,
+    includeExtensions: ['.md', '.txt', '.json'],
+  }),
+);
+```
+
+Clients can then call `resources/list` and `resources/read` to discover and fetch catalogued content. Capability negotiation ensures the `resources` feature is only advertised when providers are registered.
+
+```typescript
+// Whenever your catalogue changes
+await server.notifyResourcesUpdated({
+  uris: ['memory://guides/getting-started'],
+  reason: 'docs-sync',
+});
+```
+
+## 🗣️ Prompt Providers
+
+### Register prompts with placeholders
+
+```typescript
+import { MCPServer, InMemoryPromptProvider } from '@mcp-accelerator/core';
+
+const server = new MCPServer({ name: 'prompt-server', version: '1.0.0' });
+
+server.registerPromptProvider(
+  new InMemoryPromptProvider('builtin', 'Built-in prompts', [
+    {
+      id: 'welcome-user',
+      title: 'Welcome message',
+      description: 'Greets a user with their name and project.',
+      tags: ['greeting', 'onboarding'],
+      placeholders: [
+        { id: 'name', description: 'Name of the user', required: true },
+        { id: 'project', description: 'Project name', required: false },
+      ],
+      content: [
+        { role: 'system', text: 'You are a helpful assistant.' },
+        {
+          role: 'user',
+          text: 'Please welcome {{name}} to the {{project}} project.',
+        },
+      ],
+    },
+  ]),
+);
+```
+
+Clients request prompt metadata with `prompts/list` and fetch templated content via `prompts/get`, providing placeholder values through the `arguments` object. The server validates required placeholders before returning the prompt.
+
+```typescript
+// Notify clients that prompt packs changed
+await server.notifyPromptsUpdated({
+  promptIds: ['welcome-user'],
+  reason: 'prompt-refresh',
+});
+```
+
+## 🔌 Plugin Management CLI
+
+Manage plugins without writing code:
+
+```bash
+# Install from a manifest file
+mcp-accelerator plugins install ./plugins/example-plugin.json
+
+# List installed plugins
+mcp-accelerator plugins list
+
+# Verify and mark a plugin as activated
+mcp-accelerator plugins activate example-plugin
+
+# Mark a plugin as deactivated
+mcp-accelerator plugins deactivate example-plugin
+
+# Inspect audit history
+mcp-accelerator plugins audit
+```
+
+# 🔒 Default Security Helper
+
+The `applyDefaultSecurity` helper wires authentication, rate limit, and observability middleware based on environment variables:
+
+```bash
+export MCP_JWT_SECRET=replace-me
+export MCP_API_KEYS=alpha,beta,gamma
+export MCP_RATE_LIMIT_MAX=120
+export MCP_RATE_LIMIT_WINDOW_MS=60000
+export OTEL_SERVICE_NAME=my-mcp-service
+```
+
+```typescript
+import { createServer, applyDefaultSecurity } from 'mcp-accelerator';
+
+const server = createServer({ name: 'secure-server', version: '1.0.0' });
+await applyDefaultSecurity(server);
+```
+
+If the optional middleware packages are not installed, the helper simply logs a warning and continues.
 
 ## 📚 Packages
 
@@ -460,7 +624,8 @@ Comprehensive guides are available in the [`docs/`](docs/) directory:
 | [Security Packages](docs/SECURITY_PACKAGES.md) | Production security guide (auth, rate limiting, CORS) |
 | [TypeScript Ergonomics](docs/TYPESCRIPT_ERGONOMICS.md) | Type-safe development guide |
 | [Testing Guide](docs/TESTING_GUIDE.md) | Testing best practices and CI/CD |
-| [Release Guide](docs/RELEASE_GUIDE.md) | How to release new versions |
+| [Release Process](docs/development/releases.md) | Automated changelog, versioning, and publish workflow |
+| [Phase 4 Validation](docs/development/validation-phase4.md) | CI, security, and DX evidence for Phase 4 gate |
 
 See [`docs/README.md`](docs/README.md) for complete documentation index.
 
@@ -484,9 +649,30 @@ npm run build:sse
 
 # Watch mode for development
 npm run dev
+```
 
-# Tests
-npm test
+## 🧪 Tests
+
+```bash
+# Phase 1 suites (protocol negotiation, logging, schema metadata)
+npx jest packages/core/src/core/__tests__/protocol-manager.test.ts \
+          packages/core/src/core/__tests__/tool-manager.test.ts \
+          packages/core/src/core/__tests__/server.initialize.test.ts --coverage=false
+
+# Phase 2 suites (resource manager + server wiring)
+npx jest packages/core/src/resources/__tests__/resource-manager.test.ts \
+          packages/core/src/core/__tests__/server.resources.test.ts --coverage=false
+
+# Phase 2 prompts suites
+npx jest packages/core/src/prompts/__tests__/prompt-manager.test.ts \
+          packages/core/src/core/__tests__/server.prompts.test.ts --coverage=false
+
+# E2E reference client over WebSocket (requires build)
+npm run e2e:reference
+# (Runs a Node harness locally; skip inside restricted sandbox environments)
+
+# HTTP transport integration (requires network + open ports; run locally or in privileged CI)
+npx jest packages/core/src/__tests__/integration/transport-integration.test.ts --coverage=false
 ```
 
 ## 🔧 Development

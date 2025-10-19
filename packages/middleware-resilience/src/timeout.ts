@@ -41,8 +41,8 @@ export function createTimeoutMiddleware(options: TimeoutOptions = {}): Middlewar
       // Determine timeout for this request
       let timeoutMs = defaultTimeout;
       
-      if (message.method === 'tools/execute' && message.params) {
-        const toolName = (message.params as any).name;
+      if (message.method === 'tools/call' && message.params) {
+        const toolName = (message.params as { name?: string }).name;
         if (toolName && toolTimeouts[toolName]) {
           timeoutMs = toolTimeouts[toolName];
         }

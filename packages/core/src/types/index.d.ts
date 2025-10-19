@@ -34,6 +34,153 @@ export interface StrictMetadata {
     [key: string]: unknown;
 }
 /**
+ * Capability definitions following MCP specification
+ */
+export interface ToolsCapability {
+    listChanged: boolean;
+    [key: string]: unknown;
+}
+export interface ResourcesCapability {
+    subscribe: boolean;
+    listChanged: boolean;
+    [key: string]: unknown;
+}
+export interface PromptsCapability {
+    listChanged: boolean;
+    [key: string]: unknown;
+}
+export interface LoggingCapability {
+    [key: string]: unknown;
+}
+export interface ServerCapabilities {
+    tools?: ToolsCapability;
+    resources?: ResourcesCapability;
+    prompts?: PromptsCapability;
+    logging?: LoggingCapability;
+    events?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+/**
+ * Protocol version metadata used for negotiation
+ */
+export interface ProtocolVersionDefinition {
+    version: string;
+    capabilities: ServerCapabilities;
+    features?: string[];
+    deprecated?: boolean;
+}
+export interface ProtocolManagerOptions {
+    /**
+     * Known protocol versions and their capabilities
+     */
+    versions?: ProtocolVersionDefinition[];
+    /**
+     * Default version returned when negotiation fails or no version is provided
+     */
+    defaultVersion?: string;
+    /**
+     * Reject unsupported versions instead of falling back
+     */
+    strictMode?: boolean;
+    /**
+     * Attempt to find a backward compatible version when the requested one is unknown
+     */
+    allowBackwardCompatibility?: boolean;
+}
+/**
+ * Resource descriptor exposed to clients
+ */
+export interface ResourceDescriptor {
+    uri: string;
+    name: string;
+    description?: string;
+    mimeType: string;
+    provider?: {
+        id: string;
+        displayName: string;
+    };
+    tags?: string[];
+    requiresAuth?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    metadata?: Metadata;
+}
+/**
+ * Resource content returned by providers
+ */
+export interface ResourceContent {
+    uri: string;
+    mimeType: string;
+    data: string;
+    encoding: 'utf-8' | 'base64';
+    metadata?: Metadata;
+}
+/**
+ * Context passed to resource providers
+ */
+export interface ResourceProviderContext<TMetadata extends Metadata = StrictMetadata> {
+    logger: Logger;
+    metadata: TMetadata;
+}
+/**
+ * Resource provider interface
+ */
+export interface ResourceProvider {
+    id: string;
+    displayName: string;
+    listResources(context: ResourceProviderContext): Promise<ResourceDescriptor[]>;
+    readResource(uri: string, context: ResourceProviderContext): Promise<ResourceContent>;
+    canHandle?(uri: string): boolean | Promise<boolean>;
+}
+/**
+ * Prompt placeholders describe dynamic variables to be filled by the client
+ */
+export interface PromptPlaceholder {
+    id: string;
+    description?: string;
+    required?: boolean;
+    type?: 'text' | 'number' | 'boolean' | 'json';
+}
+/**
+ * Prompt definition exposed by providers
+ */
+export interface PromptDefinition {
+    id: string;
+    title: string;
+    description?: string;
+    tags?: string[];
+    version?: string;
+    metadata?: Metadata;
+    placeholders?: PromptPlaceholder[];
+    content: Array<{
+        role: 'system' | 'user' | 'assistant' | 'tool';
+        text: string;
+    }>;
+}
+export interface PromptProviderContext<TMetadata extends Metadata = StrictMetadata> {
+    logger: Logger;
+    metadata: TMetadata;
+}
+/**
+ * Prompt provider interface
+ */
+export interface PromptProvider {
+    id: string;
+    displayName: string;
+    listPrompts(context: PromptProviderContext): Promise<PromptDefinition[]>;
+    getPrompt(id: string, context: PromptProviderContext): Promise<PromptDefinition | null>;
+}
+export interface ResourceUpdateEvent {
+    uris?: string[];
+    reason?: string;
+    listChanged?: boolean;
+}
+export interface PromptUpdateEvent {
+    promptIds?: string[];
+    reason?: string;
+    listChanged?: boolean;
+}
+/**
  * MCP Server Configuration
  */
 export interface ServerConfig {
@@ -43,6 +190,14 @@ export interface ServerConfig {
     version: string;
     /** Custom logger (optional) */
     logger?: Logger;
+    /** Protocol negotiation options */
+    protocol?: ProtocolManagerOptions;
+    /** Capabilities that are actually implemented by the server */
+    capabilities?: ServerCapabilities;
+    /** Resource providers registered at startup */
+    resources?: ResourceProvider[];
+    /** Prompt providers registered at startup */
+    prompts?: PromptProvider[];
     /** Transport options */
     transport?: TransportConfig;
     /** Plugins to load at startup */
@@ -195,10 +350,61 @@ export interface Plugin {
     version: string;
     /** Execution priority (higher = earlier) */
     priority?: number;
+    /** Declared dependencies */
+    dependencies?: string[];
     /** Plugin initialization */
     initialize(server: MCPServerInterface): Promise<void> | void;
     /** Cleanup on deactivation */
     cleanup?(): Promise<void> | void;
+}
+/**
+ * Integrity information for plugin binaries
+ */
+export interface PluginIntegrity {
+    algorithm: 'sha256';
+    hash: string;
+}
+/**
+ * Plugin manifest used for installation
+ */
+export interface PluginManifest {
+    /** Plugin name */
+    name: string;
+    /** Plugin version */
+    version: string;
+    /** Module entry path (relative to manifest) */
+    entry: string;
+    /** Execution priority (higher loads first) */
+    priority?: number;
+    /** Required dependencies */
+    dependencies?: string[];
+    /** Optional integrity block */
+    integrity?: PluginIntegrity;
+    /** Display name for humans */
+    displayName?: string;
+    /** Additional metadata */
+    metadata?: Metadata;
+}
+/**
+ * Installed plugin record persisted by the manager
+ */
+export interface InstalledPluginRecord {
+    manifest: PluginManifest;
+    entryPath: string;
+    installedAt: string;
+    status: 'installed' | 'activated' | 'deactivated';
+    checksumVerified: boolean;
+    activatedAt?: string;
+    deactivatedAt?: string;
+}
+/**
+ * Audit log entry produced by the plugin manager
+ */
+export interface PluginAuditRecord {
+    timestamp: string;
+    plugin: string;
+    action: 'install' | 'activate' | 'deactivate' | 'uninstall';
+    details?: Metadata;
 }
 /**
  * MCP Server interface (for plugins and extensions)

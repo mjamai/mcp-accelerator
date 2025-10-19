@@ -6,34 +6,54 @@ exports.SilentLogger = exports.ConsoleLogger = void 0;
  */
 class ConsoleLogger {
     level;
+    static orderedLevels = ['debug', 'info', 'warn', 'error'];
     constructor(level = 'info') {
         this.level = level;
     }
+    /**
+     * Dynamically change the logger level to honor logging/setLevel requests.
+     */
+    setLevel(level) {
+        if (!ConsoleLogger.orderedLevels.includes(level)) {
+            throw new Error(`Invalid log level: ${level}`);
+        }
+        this.level = level;
+    }
+    /**
+     * Expose current level for observability and testing purposes.
+     */
+    getLevel() {
+        return this.level;
+    }
     shouldLog(level) {
-        const levels = ['debug', 'info', 'warn', 'error'];
-        return levels.indexOf(level) >= levels.indexOf(this.level);
+        return (ConsoleLogger.orderedLevels.indexOf(level) >=
+            ConsoleLogger.orderedLevels.indexOf(this.level));
     }
     info(message, meta) {
         if (this.shouldLog('info')) {
-            console.log(`[INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+            // Use stderr for all logs to comply with MCP STDIO specification
+            process.stderr.write(`[INFO] ${message}${meta ? ' ' + JSON.stringify(meta) : ''}\n`);
         }
     }
     warn(message, meta) {
         if (this.shouldLog('warn')) {
-            console.warn(`[WARN] ${message}`, meta ? JSON.stringify(meta) : '');
+            // Use stderr for all logs to comply with MCP STDIO specification
+            process.stderr.write(`[WARN] ${message}${meta ? ' ' + JSON.stringify(meta) : ''}\n`);
         }
     }
     error(message, error, meta) {
         if (this.shouldLog('error')) {
-            console.error(`[ERROR] ${message}`, error?.message || '', meta ? JSON.stringify(meta) : '');
+            // Use stderr for all logs to comply with MCP STDIO specification
+            process.stderr.write(`[ERROR] ${message}${error?.message ? ' ' + error.message : ''}${meta ? ' ' + JSON.stringify(meta) : ''}\n`);
             if (error?.stack) {
-                console.error(error.stack);
+                process.stderr.write(error.stack + '\n');
             }
         }
     }
     debug(message, meta) {
         if (this.shouldLog('debug')) {
-            console.debug(`[DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+            // Use stderr for all logs to comply with MCP STDIO specification
+            process.stderr.write(`[DEBUG] ${message}${meta ? ' ' + JSON.stringify(meta) : ''}\n`);
         }
     }
 }

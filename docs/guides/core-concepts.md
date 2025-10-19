@@ -351,7 +351,20 @@ const handler = safeHandler(async (input) => {
 
 ### 2. Authentication
 
-Use middleware for authentication:
+Use the helper to wire JWT/API key authentication quickly:
+
+```typescript
+import { applyDefaultSecurity } from 'mcp-accelerator';
+
+await applyDefaultSecurity(server, {
+  auth: {
+    jwt: { secret: process.env.MCP_JWT_SECRET },
+    apiKey: { keys: process.env.MCP_API_KEYS?.split(',') },
+  },
+});
+```
+
+Or register custom middleware manually:
 
 ```typescript
 import { JWTAuthMiddleware } from '@mcp-accelerator/middleware-auth';
@@ -366,13 +379,15 @@ server.use(new JWTAuthMiddleware({
 
 Protect against abuse:
 
-```typescript
-import { RateLimitMiddleware } from '@mcp-accelerator/middleware-ratelimit';
+`applyDefaultSecurity` also wires a rate limit middleware when `MCP_RATE_LIMIT_MAX` (per minute) is defined. For custom strategies, compose middlewares manually:
 
-server.use(new RateLimitMiddleware({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,                 // Limit each IP to 100 requests per windowMs
-  keyGenerator: (req) => req.ip
+```typescript
+import { createRateLimitMiddleware } from '@mcp-accelerator/middleware-ratelimit';
+
+server.registerMiddleware(createRateLimitMiddleware({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  keyGenerator: (context) => context.clientId ?? 'anonymous',
 }));
 ```
 

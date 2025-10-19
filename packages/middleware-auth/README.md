@@ -64,7 +64,7 @@ await server.start();
 curl -X POST http://localhost:3000/mcp \
   -H "Authorization: Bearer eyJhbGc..." \
   -H "Content-Type: application/json" \
-  -d '{"type":"request","method":"tools/execute","params":{"name":"protected-action"}}'
+  -d '{"type":"request","method":"tools/call","params":{"name":"protected-action","arguments":{}}}'
 ```
 
 ### API Key Authentication
@@ -102,7 +102,7 @@ server.registerMiddleware(createAPIKeyAuthMiddleware({
 curl -X POST http://localhost:3000/mcp \
   -H "X-API-Key: key-123" \
   -H "Content-Type: application/json" \
-  -d '{"type":"request","method":"tools/execute","params":{"name":"protected-action"}}'
+  -d '{"type":"request","method":"tools/call","params":{"name":"protected-action","arguments":{}}}'
 ```
 
 ### Custom Headers

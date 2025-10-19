@@ -1,16 +1,22 @@
-import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { BaseTransport, MCPMessage } from '@mcp-accelerator/core';
+import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'crypto';
+
+import { BaseTransport, MCPMessage } from '@mcp-accelerator/core';
 
 interface SSETransportOptions {
   host?: string;
   port?: number;
+  authToken?: string;
+  maxRequestsPerMinute?: number;
 }
 
 interface SSEClient {
   id: string;
   reply: FastifyReply;
 }
+
+const CORS_ALLOW_HEADERS =
+  'content-type, authorization, x-auth-token, x-client-id, mcp-session-id';
 
 /**
  * Server-Sent Events (SSE) transport for server-to-client streaming
@@ -20,12 +26,19 @@ export class SSETransport extends BaseTransport {
   private fastify?: FastifyInstance;
   private clients: Map<string, SSEClient> = new Map();
   private options: SSETransportOptions;
+  private requestCounters: Map<string, { windowStart: number; count: number }> = new Map();
+  private metrics = {
+    rejectedAuth: 0,
+    rejectedQuota: 0,
+  };
 
   constructor(options: SSETransportOptions = {}) {
     super();
     this.options = {
       host: options.host || '127.0.0.1',
-      port: options.port || 3002,
+      port: options.port ?? 3002,
+      authToken: options.authToken ?? '',
+      maxRequestsPerMinute: options.maxRequestsPerMinute ?? 0,
     };
   }
 
@@ -37,12 +50,37 @@ export class SSETransport extends BaseTransport {
       throw new Error('SSE transport is already started');
     }
 
-    this.fastify = Fastify({
-      logger: false,
+    this.fastify = Fastify({ logger: false });
+
+    this.fastify.addHook('onRequest', (request, reply, done) => {
+      const origin = request.headers.origin ?? '*';
+      reply.header('Access-Control-Allow-Origin', origin);
+      reply.header('Access-Control-Allow-Credentials', 'true');
+      done();
+    });
+
+    this.fastify.options('/mcp/events', async (request, reply) => {
+      reply
+        .header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        .header('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS)
+        .status(204)
+        .send();
+    });
+
+    this.fastify.options('/mcp/message', async (request, reply) => {
+      reply
+        .header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        .header('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS)
+        .status(204)
+        .send();
     });
 
     // SSE endpoint for establishing connection
     this.fastify.get('/mcp/events', async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!this.authenticateRequest(request, reply)) {
+        return;
+      }
+
       const clientId = randomUUID();
 
       // Set SSE headers
@@ -50,6 +88,9 @@ export class SSETransport extends BaseTransport {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': request.headers.origin ?? '*',
+        'Access-Control-Allow-Headers': CORS_ALLOW_HEADERS,
+        'Access-Control-Allow-Credentials': 'true',
         'X-Accel-Buffering': 'no',
       });
 
@@ -85,6 +126,14 @@ export class SSETransport extends BaseTransport {
 
     // POST endpoint for receiving messages from client
     this.fastify.post('/mcp/message', async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!this.authenticateRequest(request, reply)) {
+        return;
+      }
+
+      if (!this.applyQuota(request, reply)) {
+        return;
+      }
+
       try {
         const clientId = request.headers['x-client-id'] as string;
         if (!clientId || !this.clients.has(clientId)) {
@@ -94,12 +143,19 @@ export class SSETransport extends BaseTransport {
         const message = request.body as MCPMessage;
         await this.emitMessage(clientId, message);
 
-        return reply.send({ status: 'ok' });
+        return reply
+          .header('Access-Control-Allow-Origin', request.headers.origin ?? '*')
+          .header('Access-Control-Allow-Credentials', 'true')
+          .send({ status: 'ok' });
       } catch (error) {
-        return reply.status(400).send({
-          error: 'Invalid message format',
-          details: error instanceof Error ? error.message : 'Unknown error',
-        });
+        return reply
+          .header('Access-Control-Allow-Origin', request.headers.origin ?? '*')
+          .header('Access-Control-Allow-Credentials', 'true')
+          .status(400)
+          .send({
+            error: 'Invalid message format',
+            details: error instanceof Error ? error.message : 'Unknown error',
+          });
       }
     });
 
@@ -111,6 +167,12 @@ export class SSETransport extends BaseTransport {
         clients: this.clients.size,
       };
     });
+    this.fastify.get('/metrics', async () => ({
+      connectedClients: this.clients.size,
+      rejectedAuth: this.metrics.rejectedAuth,
+      rejectedQuota: this.metrics.rejectedQuota,
+      requestCounters: this.requestCounters.size,
+    }));
 
     await this.fastify.listen({
       host: this.options.host,
@@ -139,6 +201,7 @@ export class SSETransport extends BaseTransport {
 
     await this.fastify.close();
     this.clients.clear();
+    this.requestCounters.clear();
     this.isStarted = false;
   }
 
@@ -186,5 +249,54 @@ export class SSETransport extends BaseTransport {
   getClientCount(): number {
     return this.clients.size;
   }
-}
 
+  private authenticateRequest(request: FastifyRequest, reply: FastifyReply): boolean {
+    if (!this.options.authToken) {
+      return true;
+    }
+
+    const header = request.headers['authorization'];
+    const expected = `Bearer ${this.options.authToken}`;
+    if (header !== expected) {
+      this.metrics.rejectedAuth++;
+      reply.code(401).send({ error: 'Unauthorized' });
+      return false;
+    }
+    return true;
+  }
+
+  private applyQuota(request: FastifyRequest, reply: FastifyReply): boolean {
+    if (!this.options.maxRequestsPerMinute || this.options.maxRequestsPerMinute <= 0) {
+      return true;
+    }
+
+    const clientKey =
+      (request.headers['x-client-id'] as string) ||
+      request.headers['authorization'] ||
+      request.ip;
+
+    const windowMs = 60_000;
+    const now = Date.now();
+    const record = this.requestCounters.get(clientKey) ?? { windowStart: now, count: 0 };
+
+    if (now - record.windowStart >= windowMs) {
+      record.windowStart = now;
+      record.count = 0;
+    }
+
+    record.count += 1;
+    this.requestCounters.set(clientKey, record);
+
+    if (record.count > this.options.maxRequestsPerMinute) {
+      this.metrics.rejectedQuota++;
+      reply.code(429).send({
+        error: 'Rate limit exceeded',
+        code: 'RATE_LIMIT',
+        limits: { maxRequestsPerMinute: this.options.maxRequestsPerMinute },
+      });
+      return false;
+    }
+
+    return true;
+  }
+}

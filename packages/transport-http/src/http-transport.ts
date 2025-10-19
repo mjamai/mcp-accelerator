@@ -1,10 +1,19 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { BaseTransport, MCPMessage } from '@mcp-accelerator/core';
 import { randomUUID } from 'crypto';
+import { AddressInfo } from 'net';
 
 export interface HttpTransportOptions {
   host?: string;
   port?: number;
+  /** Require Authorization header with Bearer token */
+  authToken?: string;
+  /** Maximum requests per minute per client (0 = unlimited) */
+  maxRequestsPerMinute?: number;
+  /** Enable CORS support (default: false) */
+  enableCors?: boolean;
+  /** CORS origin (default: '*' for all origins) */
+  corsOrigin?: string | string[];
   
   // Timeouts
   /** Request timeout in milliseconds (default: 30000 = 30s) */
@@ -48,7 +57,14 @@ export class HttpTransport extends BaseTransport {
   public readonly name = 'http';
   private fastify?: FastifyInstance;
   private clients: Map<string, FastifyReply> = new Map();
+  private clientMetadata: Map<string, Record<string, unknown>> = new Map();
   private options: Required<HttpTransportOptions>;
+  private listeningAddress: { host: string; port: number } | null = null;
+  private requestCounters: Map<string, { windowStart: number; count: number }> = new Map();
+  private metrics = {
+    rejectedAuth: 0,
+    rejectedQuota: 0,
+  };
   
   // Concurrency control
   private activeRequests = 0;
@@ -64,7 +80,11 @@ export class HttpTransport extends BaseTransport {
     super();
     this.options = {
       host: options.host || '127.0.0.1',
-      port: options.port || 3000,
+      port: options.port ?? 3000,
+      authToken: options.authToken ?? '',
+      maxRequestsPerMinute: options.maxRequestsPerMinute ?? 0,
+      enableCors: options.enableCors ?? false,
+      corsOrigin: options.corsOrigin ?? '*',
       requestTimeout: options.requestTimeout ?? 30000,
       connectionTimeout: options.connectionTimeout ?? 5000,
       keepAliveTimeout: options.keepAliveTimeout ?? 72000,
@@ -99,8 +119,43 @@ export class HttpTransport extends BaseTransport {
       ...this.options.fastifyOptions,
     });
 
+    // Add CORS headers manually if enabled
+    if (this.options.enableCors) {
+      this.fastify.addHook('onRequest', async (request, reply) => {
+        const origin = request.headers.origin;
+        const allowedOrigins = Array.isArray(this.options.corsOrigin) 
+          ? this.options.corsOrigin 
+          : [this.options.corsOrigin];
+        
+        // Check if origin is allowed
+        if (this.options.corsOrigin === '*' || 
+            (origin && allowedOrigins.includes(origin))) {
+          reply.header('Access-Control-Allow-Origin', origin || '*');
+        }
+        
+        reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token, x-client-id');
+        reply.header('Access-Control-Allow-Credentials', 'true');
+        reply.header('Access-Control-Max-Age', '86400'); // 24 hours
+      });
+
+      // Handle preflight requests
+      this.fastify.options('/*', async (request, reply) => {
+        reply.status(200);
+        return '';
+      });
+    }
+
     // Add request tracking hook
     this.fastify.addHook('onRequest', async (request, reply) => {
+      if (!this.authenticateRequest(request, reply)) {
+        return;
+      }
+
+      if (!this.applyQuota(request, reply)) {
+        return;
+      }
+
       // Check circuit breaker
       if (this.options.enableCircuitBreaker) {
         const circuitStatus = this.checkCircuitBreaker();
@@ -197,6 +252,9 @@ export class HttpTransport extends BaseTransport {
           ),
         };
 
+        // Store metadata for this client
+        this.clientMetadata.set(clientId, metadata);
+
         // Emit message with timeout
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Request timeout')), this.options.requestTimeout);
@@ -247,6 +305,15 @@ export class HttpTransport extends BaseTransport {
       port: this.options.port,
     });
 
+    const addressInfo = this.fastify.server.address() as AddressInfo;
+    if (addressInfo && typeof addressInfo.port === 'number') {
+      const host =
+        addressInfo.address && addressInfo.address !== '::'
+          ? addressInfo.address
+          : this.options.host;
+      this.listeningAddress = { host, port: addressInfo.port };
+    }
+
     this.isStarted = true;
     console.log(`HTTP transport listening on ${this.options.host}:${this.options.port}`);
     console.log(`  Request timeout: ${this.options.requestTimeout}ms`);
@@ -268,6 +335,7 @@ export class HttpTransport extends BaseTransport {
 
     await this.fastify.close();
     this.clients.clear();
+    this.listeningAddress = null;
     this.isStarted = false;
   }
 
@@ -284,6 +352,7 @@ export class HttpTransport extends BaseTransport {
       throw new Error(`Client not found: ${clientId}`);
     }
 
+    reply.header('Content-Type', 'application/json');
     await reply.send(message);
     this.clients.delete(clientId);
   }
@@ -364,11 +433,74 @@ export class HttpTransport extends BaseTransport {
       activeRequests: this.activeRequests,
       queueSize: this.requestQueue.length,
       connectedClients: this.clients.size,
+      rejectedAuth: this.metrics.rejectedAuth,
+      rejectedQuota: this.metrics.rejectedQuota,
       circuitBreaker: this.options.enableCircuitBreaker ? {
         state: this.circuitState,
         failures: this.failureCount,
         successes: this.successCount,
       } : null,
     };
+  }
+
+  getListeningAddress(): { host: string; port: number } | null {
+    return this.listeningAddress;
+  }
+
+  private authenticateRequest(request: FastifyRequest, reply: FastifyReply): boolean {
+    if (!this.options.authToken) {
+      return true;
+    }
+
+    const header = request.headers['authorization'];
+    const expected = `Bearer ${this.options.authToken}`;
+    if (header !== expected) {
+      this.metrics.rejectedAuth++;
+      reply.code(401).send({ error: 'Unauthorized' });
+      return false;
+    }
+    return true;
+  }
+
+  private applyQuota(request: FastifyRequest, reply: FastifyReply): boolean {
+    if (!this.options.maxRequestsPerMinute || this.options.maxRequestsPerMinute <= 0) {
+      return true;
+    }
+
+    const clientKey =
+      (request.headers['x-client-id'] as string) ||
+      request.headers['authorization'] ||
+      request.ip;
+
+    const windowMs = 60_000;
+    const now = Date.now();
+    const record = this.requestCounters.get(clientKey) ?? { windowStart: now, count: 0 };
+
+    if (now - record.windowStart >= windowMs) {
+      record.windowStart = now;
+      record.count = 0;
+    }
+
+    record.count += 1;
+    this.requestCounters.set(clientKey, record);
+
+    if (record.count > this.options.maxRequestsPerMinute) {
+      this.metrics.rejectedQuota++;
+      reply.code(429).send({
+        error: 'Rate limit exceeded',
+        code: 'RATE_LIMIT',
+        limits: { maxRequestsPerMinute: this.options.maxRequestsPerMinute },
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get metadata for a client
+   */
+  getClientMetadata(clientId: string): Record<string, unknown> {
+    return this.clientMetadata.get(clientId) || {};
   }
 }

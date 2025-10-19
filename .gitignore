@@ -10,3 +10,8 @@ coverage/
 *.swo
 *.map
 # docs/ - Now using GitHub Pages
+
+# Generated build artefacts in nested packages/examples
+**/dist/
+**/dist-temp/
+**/*.tsbuildinfo

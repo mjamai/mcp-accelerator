@@ -1,0 +1,37 @@
+{
+  "name": "@mcp-accelerator/http-streamable-example",
+  "version": "1.0.0",
+  "description": "HTTP Streamable MCP server example with streaming capabilities",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node index.ts",
+    "dev": "npx tsx index.ts",
+    "build": "npx tsc index.ts --outDir dist-temp --target es2020 --module commonjs --esModuleInterop --skipLibCheck",
+    "inspector": "npx @modelcontextprotocol/inspector node index.ts",
+    "mcp-inspector": "npx @modelcontextprotocol/inspector node index.ts",
+    "auto-start": "./start-inspector.sh",
+    "test": "echo 'Run ./start-inspector.sh to test with MCP Inspector'"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "http",
+    "streamable",
+    "server",
+    "example",
+    "mcp-inspector",
+    "streaming"
+  ],
+  "author": "MCraPid Team",
+  "license": "MIT",
+  "dependencies": {
+    "@mcp-accelerator/core": "workspace:*",
+    "@mcp-accelerator/transport-http": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}

@@ -100,7 +100,7 @@ Every request and tool execution is automatically traced:
 
 ```
 my-mcp-server
-  ├─ request.tools/execute (10ms)
+  ├─ request.tools/call (10ms)
   │   └─ tool.text-stats (8ms)
   └─ request.tools/list (2ms)
 ```

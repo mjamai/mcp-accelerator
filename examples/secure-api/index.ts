@@ -249,7 +249,7 @@ Test the API:
    curl http://localhost:${PORT}/mcp \\
      -H "X-API-Key: ${API_KEYS[0] || 'key-123'}" \\
      -H "Content-Type: application/json" \\
-     -d '{"type":"request","method":"tools/execute","params":{"name":"get-status"}}'
+     -d '{"type":"request","method":"tools/call","params":{"name":"get-status","arguments":{}}}'
 
 2. Using JWT (user account):
    # First, generate a JWT token with your secret
@@ -257,13 +257,13 @@ Test the API:
    curl http://localhost:${PORT}/mcp \\
      -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
      -H "Content-Type: application/json" \\
-     -d '{"type":"request","method":"tools/execute","params":{"name":"get-user-data"}}'
+     -d '{"type":"request","method":"tools/call","params":{"name":"get-user-data","arguments":{}}}'
 
 3. Check rate limits:
    curl http://localhost:${PORT}/mcp \\
      -H "X-API-Key: ${API_KEYS[0] || 'key-123'}" \\
      -H "Content-Type: application/json" \\
-     -d '{"type":"request","method":"tools/execute","params":{"name":"get-status"}}'
+     -d '{"type":"request","method":"tools/call","params":{"name":"get-status","arguments":{}}}'
 
 Environment variables:
   - JWT_SECRET: ${JWT_SECRET === 'change-this-in-production' ? '⚠️  Using default (CHANGE IN PRODUCTION!)' : '✓ Custom secret set'}

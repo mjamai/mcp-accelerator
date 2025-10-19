@@ -104,6 +104,25 @@ Expected response:
 }
 ```
 
+## ⚙️ Scaffold With The CLI
+
+The `mcp-accelerator` CLI streamlines boilerplate generation:
+
+```bash
+# Inside your project root
+npx mcp-accelerator generate tool echo-tool --description "Echo tool"
+npx mcp-accelerator generate resource filesystem
+npx mcp-accelerator generate prompt onboarding --skip-test
+
+# Generate tests later when you expand coverage
+npx mcp-accelerator generate test tool echo-tool
+
+# Audit the project for MCP best practices
+npx mcp-accelerator doctor
+```
+
+Use `--project <path>` to scaffold or validate directories outside the current working directory, and `--force` when you intentionally overwrite existing files.
+
 ## 🎯 Key Concepts
 
 ### 1. **MCPServer**

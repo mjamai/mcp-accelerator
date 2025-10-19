@@ -2,7 +2,14 @@
  * Custom plugin example - Authentication and authorization
  */
 
-import { createServer, z, Plugin, MCPServerInterface } from '../../src';
+import {
+  MCPServer,
+  HookPhase,
+  Plugin,
+  MCPServerInterface,
+  z,
+} from '@mcp-accelerator/core';
+import { HttpTransport } from '@mcp-accelerator/transport-http';
 
 /**
  * Simple authentication plugin
@@ -12,7 +19,7 @@ class AuthPlugin implements Plugin {
   version = '1.0.0';
   priority = 100; // High priority to run early
 
-  private validTokens = new Set(['secret-token-123', 'admin-token-456']);
+  private readonly validTokens = new Set(['secret-token-123', 'admin-token-456']);
 
   async initialize(server: MCPServerInterface): Promise<void> {
     server.logger.info('Initializing authentication plugin');
@@ -22,17 +29,23 @@ class AuthPlugin implements Plugin {
       name: 'auth-middleware',
       priority: 100,
       handler: async (message, context, next) => {
-        // Skip auth for tool listing
-        if (message.method === 'tools/list') {
+        // Allow handshake and discovery without token
+        if (message.method === 'initialize' || message.method === 'tools/list') {
           return next();
         }
 
-        // Check for authentication token in metadata
-        const token = context.metadata?.token as string;
-        
+        const token =
+          (context.metadata?.['x-auth-token'] as string | undefined) ??
+          (context.metadata?.authorization as string | undefined);
+
         if (!token || !this.validTokens.has(token)) {
           throw new Error('Unauthorized: Invalid or missing token');
         }
+
+        context.metadata = {
+          ...context.metadata,
+          authenticated: true,
+        };
 
         context.logger.info('Request authenticated', { clientId: context.clientId });
         await next();
@@ -42,7 +55,7 @@ class AuthPlugin implements Plugin {
     // Add hook to log authentication attempts
     server.registerHook({
       name: 'auth-log-hook',
-      phase: 'beforeToolExecution',
+      phase: HookPhase.BeforeToolExecution,
       handler: async (ctx) => {
         server.logger.info('Authenticated tool execution', {
           tool: ctx.toolName,
@@ -58,16 +71,18 @@ class AuthPlugin implements Plugin {
 }
 
 async function main() {
-  const server = createServer({
+  const server = new MCPServer({
     name: 'authenticated-server',
     version: '1.0.0',
-    transport: {
-      type: 'http',
-      port: 3000,
-      host: '127.0.0.1',
-    },
     plugins: [new AuthPlugin()],
   });
+
+  await server.setTransport(
+    new HttpTransport({
+      host: '127.0.0.1',
+      port: 3000,
+    }),
+  );
 
   // Register protected tools
   server.registerTool({
@@ -86,7 +101,7 @@ async function main() {
   });
 
   await server.start();
-  
+
   console.log('Authenticated server is running on http://127.0.0.1:3000');
   console.log('\nTo make requests, include a valid token:');
   console.log('Valid tokens: secret-token-123, admin-token-456');
@@ -101,5 +116,7 @@ async function main() {
   });
 }
 
-main().catch(console.error);
-
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

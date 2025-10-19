@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Tool, ToolContext, Logger, ToolExecutionResult } from '../types';
 import { MCPErrorCode, createMCPError, formatValidationError } from './error-handler';
+import { zodToJsonSchema } from '../utils/zod-to-json-schema';
 
 /**
  * Tool manager handles registration, validation, and execution of tools
@@ -155,14 +156,15 @@ export class ToolManager {
    * Convert Zod schema to JSON schema (simplified)
    */
   private zodSchemaToJSON(schema: z.ZodType): Record<string, unknown> {
-    // This is a simplified conversion
-    // For production, consider using zod-to-json-schema library
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const description = (schema as any)._def?.description || '';
-    return {
-      type: 'object',
-      description,
-    };
+    const jsonSchema = zodToJsonSchema(schema);
+
+    // Remove $schema metadata to keep payload concise for clients
+    if (typeof jsonSchema === 'object' && jsonSchema !== null && '$schema' in jsonSchema) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (jsonSchema as Record<string, unknown>)['$schema'];
+    }
+
+    return jsonSchema as Record<string, unknown>;
   }
 
   /**
@@ -173,4 +175,3 @@ export class ToolManager {
     this.tools.clear();
   }
 }
-

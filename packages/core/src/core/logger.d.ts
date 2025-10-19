@@ -1,10 +1,20 @@
 import { Logger } from '../types';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 /**
  * Default console logger implementation
  */
 export declare class ConsoleLogger implements Logger {
     private level;
-    constructor(level?: 'debug' | 'info' | 'warn' | 'error');
+    private static readonly orderedLevels;
+    constructor(level?: LogLevel);
+    /**
+     * Dynamically change the logger level to honor logging/setLevel requests.
+     */
+    setLevel(level: LogLevel): void;
+    /**
+     * Expose current level for observability and testing purposes.
+     */
+    getLevel(): LogLevel;
     private shouldLog;
     info(message: string, meta?: Record<string, unknown>): void;
     warn(message: string, meta?: Record<string, unknown>): void;

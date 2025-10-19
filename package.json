@@ -22,10 +22,18 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:ci": "jest --coverage --ci --maxWorkers=2",
+    "changelog": "node scripts/release/generate-changelog.mjs",
+    "release:bump": "node scripts/release/bump-version.mjs",
+    "release:prepare": "npm run test:ci && npm run security:audit && npm run security:licenses && npm run changelog",
+    "release": "npm run release:prepare && npm run release:bump",
+    "security:audit": "npm audit --production",
+    "security:snyk": "npx --yes snyk test || true",
+    "security:licenses": "node scripts/release/check-licenses.mjs",
     "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules coverage",
     "lint": "eslint packages/**/src/**/*.ts",
     "lint:fix": "eslint packages/**/src/**/*.ts --fix",
     "docs": "typedoc --out docs packages/core/src/index.ts",
+    "e2e:reference": "npm run build:core && npm run build:websocket && node scripts/e2e-websocket-reference.js",
     "prepare": "npm run build"
   },
   "keywords": [

@@ -266,9 +266,32 @@ describe('MCPServer - Comprehensive Tests', () => {
   });
 
   describe('Message Handling', () => {
+    let onMessageCallback: (
+      clientId: string,
+      message: MCPMessage
+    ) => void | Promise<void>;
+    let dispatchMessage: (message: MCPMessage) => Promise<void>;
+
     beforeEach(async () => {
       await server.setTransport(mockTransport);
       await server.start();
+
+      onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
+      dispatchMessage = async (message: MCPMessage): Promise<void> => {
+        await Promise.resolve(onMessageCallback('client-1', message));
+      };
+
+      await dispatchMessage({
+        type: 'request',
+        id: 'init-1',
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+
+      mockTransport.send.mockClear();
     });
 
     it('should handle tools/list request', async () => {
@@ -287,8 +310,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         method: 'tools/list',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', {
         type: 'response',
@@ -301,7 +323,7 @@ describe('MCPServer - Comprehensive Tests', () => {
       });
     });
 
-    it('should handle tools/execute request successfully', async () => {
+    it('should handle tools/call request successfully', async () => {
       const toolHandler = jest.fn().mockResolvedValue({ result: 'success' });
       const tool: Tool = {
         name: 'echo-tool',
@@ -315,15 +337,14 @@ describe('MCPServer - Comprehensive Tests', () => {
       const message: MCPMessage = {
         type: 'request',
         id: 'msg-2',
-        method: 'tools/execute',
+        method: 'tools/call',
         params: {
           name: 'echo-tool',
-          input: { text: 'hello' },
+          arguments: { text: 'hello' },
         },
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(toolHandler).toHaveBeenCalledWith(
         { text: 'hello' },
@@ -337,21 +358,25 @@ describe('MCPServer - Comprehensive Tests', () => {
         type: 'response',
         id: 'msg-2',
         result: expect.objectContaining({
-          output: { result: 'success' },
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              type: 'text',
+              text: expect.stringContaining('success'),
+            }),
+          ]),
         }),
       });
     });
 
-    it('should handle tools/execute with missing tool name', async () => {
+    it('should handle tools/call with missing tool name', async () => {
       const message: MCPMessage = {
         type: 'request',
         id: 'msg-3',
-        method: 'tools/execute',
+        method: 'tools/call',
         params: {},
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', expect.objectContaining({
         type: 'error',
@@ -369,8 +394,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         method: 'unknown/method',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', expect.objectContaining({
         type: 'error',
@@ -387,8 +411,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         id: 'msg-5',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', expect.objectContaining({
         type: 'error',
@@ -419,15 +442,14 @@ describe('MCPServer - Comprehensive Tests', () => {
       const message: MCPMessage = {
         type: 'request',
         id: 'msg-6',
-        method: 'tools/execute',
+        method: 'tools/call',
         params: {
           name: 'hooked-tool',
-          input: {},
+          arguments: {},
         },
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(hookHandler).toHaveBeenCalledWith({
         event: HookPhase.BeforeToolExecution,
@@ -455,15 +477,14 @@ describe('MCPServer - Comprehensive Tests', () => {
       const message: MCPMessage = {
         type: 'request',
         id: 'msg-7',
-        method: 'tools/execute',
+        method: 'tools/call',
         params: {
           name: 'hooked-tool',
-          input: {},
+          arguments: {},
         },
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(hookHandler).toHaveBeenCalledWith({
         event: HookPhase.AfterToolExecution,
@@ -488,15 +509,14 @@ describe('MCPServer - Comprehensive Tests', () => {
       const message: MCPMessage = {
         type: 'request',
         id: 'msg-8',
-        method: 'tools/execute',
+        method: 'tools/call',
         params: {
           name: 'failing-tool',
-          input: {},
+          arguments: {},
         },
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', {
         type: 'error',
@@ -509,9 +529,28 @@ describe('MCPServer - Comprehensive Tests', () => {
   });
 
   describe('Middleware Execution', () => {
+    let dispatchMessage: (message: MCPMessage) => Promise<void>;
+
     beforeEach(async () => {
       await server.setTransport(mockTransport);
       await server.start();
+
+      const handler = mockTransport.onMessage.mock.calls[0][0];
+      dispatchMessage = async (message: MCPMessage): Promise<void> => {
+        await Promise.resolve(handler('client-1', message));
+      };
+
+      await dispatchMessage({
+        type: 'request',
+        id: 'init-1',
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+
+      mockTransport.send.mockClear();
     });
 
     it('should execute middleware in priority order', async () => {
@@ -546,8 +585,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         method: 'tools/list',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(executionOrder).toEqual([
         'mid2-before',
@@ -575,8 +613,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         method: 'tools/list',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(mockTransport.send).toHaveBeenCalledWith('client-1', {
         type: 'error',
@@ -607,8 +644,7 @@ describe('MCPServer - Comprehensive Tests', () => {
         method: 'tools/list',
       };
 
-      const onMessageCallback = mockTransport.onMessage.mock.calls[0][0];
-      await onMessageCallback('client-1', message);
+      await dispatchMessage(message);
 
       expect(capturedContext).toEqual({
         clientId: 'client-1',
@@ -664,14 +700,15 @@ describe('MCPServer - Comprehensive Tests', () => {
     it('should return correct status when server is not running', () => {
       const status = server.getStatus();
 
-      expect(status).toEqual({
+      expect(status).toEqual(expect.objectContaining({
         name: 'test-server',
         version: '1.0.0',
         isRunning: false,
         transport: null,
         toolsCount: 0,
         clientsCount: 0,
-      });
+      }));
+      expect(status.capabilities).toBeDefined();
     });
 
     it('should return correct status when server is running', async () => {
@@ -689,14 +726,16 @@ describe('MCPServer - Comprehensive Tests', () => {
 
       const status = server.getStatus();
 
-      expect(status).toEqual({
+      expect(status).toEqual(expect.objectContaining({
         name: 'test-server',
         version: '1.0.0',
         isRunning: true,
         transport: 'mock-transport',
         toolsCount: 1,
         clientsCount: 0,
-      });
+      }));
+      expect(status.capabilities).toBeDefined();
+      expect(status.initialized).toBe(false);
     });
 
     it('should track connected clients count', async () => {

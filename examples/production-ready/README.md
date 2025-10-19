@@ -112,10 +112,10 @@ curl -X POST https://localhost:8443/mcp \
   -d '{
     "type": "request",
     "id": "1",
-    "method": "tools/execute",
+    "method": "tools/call",
     "params": {
       "name": "process-data",
-      "input": {
+      "arguments": {
         "userId": "123e4567-e89b-12d3-a456-426614174000",
         "action": "fetch"
       }

@@ -57,20 +57,17 @@ inputSchema: z.object({
 
 ### Authentication
 
-For HTTP/WebSocket transports, implement authentication:
+Enable the built-in helper to wire authentication and rate limiting automatically:
+
+```bash
+export MCP_JWT_SECRET=replace-me
+export MCP_RATE_LIMIT_MAX=120
+```
 
 ```typescript
-server.registerMiddleware({
-  name: 'auth',
-  priority: 100,
-  async handler(message, context, next) {
-    // Verify authentication token
-    if (!isValidToken(context.headers?.authorization)) {
-      throw new Error('Unauthorized');
-    }
-    await next();
-  },
-});
+import { applyDefaultSecurity } from 'mcp-accelerator';
+
+await applyDefaultSecurity(server);
 ```
 
 ### Rate Limiting

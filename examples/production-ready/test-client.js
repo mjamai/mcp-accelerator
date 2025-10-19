@@ -135,9 +135,9 @@ async function testProcessData() {
   console.log('\n⚙️  Testing process-data tool...');
   
   const token = generateToken();
-  const response = await mcpRequest('tools/execute', {
+  const response = await mcpRequest('tools/call', {
     name: 'process-data',
-    input: {
+    arguments: {
       userId: '123e4567-e89b-12d3-a456-426614174000',
       action: 'fetch',
     },
@@ -145,7 +145,11 @@ async function testProcessData() {
   
   if (response.statusCode === 200 && response.body.type === 'response') {
     console.log('✅ Tool executed successfully');
-    console.log('   Result:', JSON.stringify(response.body.result.output, null, 2));
+    const firstContent = response.body.result?.content?.[0];
+    const payload = firstContent && firstContent.type === 'text'
+      ? JSON.parse(firstContent.text)
+      : firstContent;
+    console.log('   Result:', JSON.stringify(payload, null, 2));
     return response.body;
   } else {
     console.error('❌ Tool execution failed:', response.body);
@@ -178,9 +182,9 @@ async function testValidationError() {
   console.log('\n📝 Testing validation error...');
   
   const token = generateToken();
-  const response = await mcpRequest('tools/execute', {
+  const response = await mcpRequest('tools/call', {
     name: 'process-data',
-    input: {
+    arguments: {
       userId: 'invalid-uuid',  // Invalid UUID
       action: 'fetch',
     },
@@ -244,9 +248,9 @@ async function testProfileAuthorization() {
   
   // Test 1: User accessing their own profile (should succeed)
   const token1 = generateToken(userId, ['user']);
-  const response1 = await mcpRequest('tools/execute', {
+  const response1 = await mcpRequest('tools/call', {
     name: 'get-profile',
-    input: { userId },
+    arguments: { userId },
   }, token1);
   
   if (response1.body.type === 'response') {
@@ -256,9 +260,9 @@ async function testProfileAuthorization() {
   }
   
   // Test 2: User accessing another user's profile (should fail)
-  const response2 = await mcpRequest('tools/execute', {
+  const response2 = await mcpRequest('tools/call', {
     name: 'get-profile',
-    input: { userId: otherUserId },
+    arguments: { userId: otherUserId },
   }, token1);
   
   if (response2.body.type === 'error') {
@@ -270,9 +274,9 @@ async function testProfileAuthorization() {
   
   // Test 3: Admin accessing any profile (should succeed)
   const adminToken = generateToken(userId, ['user', 'admin']);
-  const response3 = await mcpRequest('tools/execute', {
+  const response3 = await mcpRequest('tools/call', {
     name: 'get-profile',
-    input: { userId: otherUserId },
+    arguments: { userId: otherUserId },
   }, adminToken);
   
   if (response3.body.type === 'response') {

@@ -2,6 +2,19 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  moduleNameMapper: {
+    '^@mcp-accelerator/core$': '<rootDir>/packages/core/src/index.ts',
+    '^@mcp-accelerator/transport-http$': '<rootDir>/packages/transport-http/src/index.ts',
+    '^@mcp-accelerator/transport-websocket$': '<rootDir>/packages/transport-websocket/src/index.ts',
+    '^@mcp-accelerator/transport-sse$': '<rootDir>/packages/transport-sse/src/index.ts',
+    '^@mcp-accelerator/transport-stdio$': '<rootDir>/packages/transport-stdio/src/index.ts',
+    '^@mcp-accelerator/middleware-auth$': '<rootDir>/packages/middleware-auth/src/index.ts',
+    '^@mcp-accelerator/middleware-cors$': '<rootDir>/packages/middleware-cors/src/index.ts',
+    '^@mcp-accelerator/middleware-ratelimit$': '<rootDir>/packages/middleware-ratelimit/src/index.ts',
+    '^@mcp-accelerator/middleware-resilience$': '<rootDir>/packages/middleware-resilience/src/index.ts',
+    '^@mcp-accelerator/middleware-observability$': '<rootDir>/packages/middleware-observability/src/index.ts',
+    '^@mcp-accelerator/(.*)$': '<rootDir>/packages/$1/src/index.ts',
+  },
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
@@ -22,7 +35,6 @@ module.exports = {
         '!packages/core/src/**/*.d.ts',
         '!packages/core/src/**/*.test.ts',
         '!packages/core/src/**/__tests__/**',
-        '!packages/core/src/cli/**',
         '!packages/core/dist/**',
         '!packages/core/src/core/safe-handler.ts', // TODO: Add tests for safe-handler utilities
       ],

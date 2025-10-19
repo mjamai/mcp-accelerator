@@ -1,11 +1,32 @@
 {
-  "name": "example-http-api",
+  "name": "mcp-accelerator-http-api",
   "version": "1.0.0",
+  "description": "MCP Accelerator HTTP API Server with data processing tools",
   "type": "module",
-  "private": true,
-  "description": "HTTP API example for MCP Accelerator",
   "scripts": {
-    "start": "node index.ts"
+    "start": "node index.ts",
+    "dev": "node --watch index.ts",
+    "inspector": "./start-inspector.sh",
+    "test": "curl http://127.0.0.1:3000/health",
+    "test-tools": "curl http://127.0.0.1:3000/mcp -H 'Content-Type: application/json' -d '{\"type\":\"request\",\"id\":\"test\",\"method\":\"tools/list\"}'",
+    "mcp-inspector": "npx @modelcontextprotocol/inspector node index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "http-api",
+    "mcp-inspector",
+    "tools",
+    "debugging"
+  ],
+  "author": "Mohamed JAMAI",
+  "license": "MIT",
+  "dependencies": {
+    "@mcp-accelerator/core": "^1.0.0",
+    "@mcp-accelerator/transport-http": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
-

@@ -71,7 +71,7 @@ export function generateMainFile(options: ProjectTemplateOptions): string {
     port: ${portMap[options.transport]},
     host: '127.0.0.1'`;
 
-  return `import { createServer, z } from 'mcp-accelerator';
+  return `import { createServer, applyDefaultSecurity, z } from 'mcp-accelerator';
 
 /**
  * Main entry point for ${options.name}
@@ -84,6 +84,27 @@ async function main() {
     transport: {
       ${transportConfig}
     }
+  });
+
+  // Apply recommended security/observability defaults (configurable via env variables)
+  await applyDefaultSecurity(server, {
+    auth: {
+      jwt: {
+        secret: process.env.MCP_JWT_SECRET,
+      },
+      apiKey: {
+        keys: process.env.MCP_API_KEYS?.split(',').map((key) => key.trim()).filter(Boolean),
+      },
+    },
+    rateLimit: {
+      max: process.env.MCP_RATE_LIMIT_MAX ? Number(process.env.MCP_RATE_LIMIT_MAX) : undefined,
+      windowMs: process.env.MCP_RATE_LIMIT_WINDOW_MS ? Number(process.env.MCP_RATE_LIMIT_WINDOW_MS) : undefined,
+    },
+    observability: {
+      serviceName: process.env.OTEL_SERVICE_NAME,
+      serviceVersion: process.env.OTEL_SERVICE_VERSION,
+      environment: process.env.OTEL_ENVIRONMENT,
+    },
   });
 
   // Register example tools
@@ -236,4 +257,3 @@ export function generateJestConfig(): string {
 };
 `;
 }
-

@@ -4,6 +4,9 @@
   "description": "Core package for MCP Accelerator framework",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-accelerator": "dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

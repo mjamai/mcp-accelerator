@@ -24,11 +24,10 @@ description: "Modern, modular, and high-performance framework for building MCP s
 Get up and running in minutes:
 
 ```bash
-# Install the core package
 npm install @mcp-accelerator/core
-
-# Create your first server
-npx @mcp-accelerator/cli create my-server
+npx mcp-accelerator create-project my-server --transport http
+cd my-server
+npm run dev
 ```
 
 <div class="alert alert-info">
@@ -86,14 +85,26 @@ Understand the architecture, components, and request lifecycle.
 ### 🔧 [Transport Layer](./guides/transports.md)
 Choose the right transport for your use case: HTTP, WebSocket, SSE, or STDIO.
 
-### 🛡️ [Middleware System](./guides/middleware.md)
-Add authentication, CORS, rate limiting, observability, and more.
+### 🛡️ [Security](./guides/security.md)
+Harden transports, authenticate clients, and audit plugins without breaking protocol guarantees.
 
-### ⚠️ [Error Handling](./guides/error-handling.md)
-Implement robust error handling and debugging strategies.
+### 🧠 [Middleware System](./guides/middleware.md)
+Add authentication, CORS, rate limiting, observability, and resilience middleware.
 
-### 🚀 [Production Deployment](./guides/production.md)
-Best practices for deploying MCP servers in production environments.
+### 📁 [Resources](./guides/resources.md)
+Compile documentation, code snippets, and assets via resource providers.
+
+### 🗣️ [Prompts](./guides/prompts.md)
+Build reusable prompt packs with typed placeholders and broadcast updates to clients.
+
+### 📊 [Observability](./guides/observability.md)
+Capture metrics, traces, and structured logs with OpenTelemetry and transport hooks.
+
+### 🚢 [Deployment & Operations](./guides/deployment.md)
+Ship MCP servers to production with repeatable builds, health checks, and rollout strategies.
+
+### 🧭 [Step-by-Step Tutorials](./guides/tutorials.md)
+Follow guided walkthroughs for STDIO assistants, HTTP deployments, and telemetry-enabled servers.
 
 ## 🔧 API Reference
 
@@ -120,11 +131,26 @@ REST API server with HTTP transport.
 ### [WebSocket Server](./examples/websocket-server.md)
 Real-time bidirectional communication.
 
+### [Basic STDIO](./examples/basic-stdio.md)
+CLI-ready STDIO server with hooks and validation.
+
+### [HTTP API](./examples/http-api.md)
+REST-style MCP server with multiple tools.
+
+### [WebSocket Server](./examples/websocket-server.md)
+Real-time calculator with broadcast support.
+
+### [Secure API](./examples/secure-api.md)
+Authentication, rate limiting, and RBAC policies.
+
+### [Prompts & Resources](./examples/prompts.md)
+Prompt provider and resource catalog demo.
+
+### [Custom Plugin](./examples/custom-plugin.md)
+Example plugin registering hooks and audit logs.
+
 ### [Production-Ready Server](./examples/production-ready.md)
 Full-featured server with authentication, TLS, and monitoring.
-
-### [Custom Middleware](./examples/custom-middleware.md)
-Creating custom middleware for specific needs.
 
 ## 🛠️ Development
 

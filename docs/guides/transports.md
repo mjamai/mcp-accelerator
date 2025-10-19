@@ -175,6 +175,22 @@ interface WebSocketTransportConfig extends TransportConfig {
 - Working in serverless environments
 - Creating automation scripts
 
+## 🔐 Authentication & Quotas
+
+Each network transport now supports optional bearer authentication and per-client quotas. When enabled, unauthorized or throttled requests are rejected before reaching the MCP server.
+
+```typescript
+import { HttpTransport } from '@mcp-accelerator/transport-http';
+import { WebSocketTransport } from '@mcp-accelerator/transport-websocket';
+import { SSETransport } from '@mcp-accelerator/transport-sse';
+
+const http = new HttpTransport({ authToken: process.env.HTTP_TOKEN, maxRequestsPerMinute: 120 });
+const ws = new WebSocketTransport({ authToken: process.env.WS_TOKEN, maxMessagesPerMinute: 240 });
+const sse = new SSETransport({ authToken: process.env.SSE_TOKEN, maxRequestsPerMinute: 60 });
+
+// Metrics endpoints (/metrics) now include rejectedAuth and rejectedQuota counters.
+```
+
 ## 📝 Implementation Examples
 
 ### HTTP Server with Authentication

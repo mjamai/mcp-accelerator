@@ -2,10 +2,13 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { BaseTransport, MCPMessage } from '@mcp-accelerator/core';
 import { randomUUID } from 'crypto';
 import { IncomingMessage } from 'http';
+import { AddressInfo } from 'net';
 
 export interface WebSocketTransportOptions {
   host?: string;
   port?: number;
+  /** Require Authorization header with Bearer token */
+  authToken?: string;
   
   // Connection limits
   /** Maximum number of concurrent clients (default: 0 = unlimited) */
@@ -30,6 +33,8 @@ export interface WebSocketTransportOptions {
   // Rate limiting per client
   /** Max messages per second per client (default: 0 = unlimited) */
   maxMessagesPerSecond?: number;
+  /** Max messages per minute per client (default: 0 = unlimited) */
+  maxMessagesPerMinute?: number;
   
   // Custom WebSocket server options
   /** Custom ws server configuration */
@@ -54,12 +59,19 @@ export class WebSocketTransport extends BaseTransport {
   private clients: Map<string, ClientState> = new Map();
   private options: Required<WebSocketTransportOptions>;
   private heartbeatTimer?: NodeJS.Timeout;
+  private listeningAddress: { host: string; port: number } | null = null;
+  private messageQuota: Map<string, { windowStart: number; count: number }> = new Map();
+  private metrics = {
+    rejectedAuth: 0,
+    rejectedQuota: 0,
+  };
 
   constructor(options: WebSocketTransportOptions = {}) {
     super();
     this.options = {
       host: options.host || '127.0.0.1',
-      port: options.port || 3001,
+      port: options.port ?? 3001,
+      authToken: options.authToken ?? '',
       maxClients: options.maxClients ?? 0,
       maxMessageSize: options.maxMessageSize ?? 1048576, // 1MB
       heartbeatInterval: options.heartbeatInterval ?? 30000,
@@ -68,6 +80,7 @@ export class WebSocketTransport extends BaseTransport {
       enableBackpressure: options.enableBackpressure ?? true,
       highWaterMark: options.highWaterMark ?? 16 * 1024 * 1024, // 16MB
       maxMessagesPerSecond: options.maxMessagesPerSecond ?? 0,
+      maxMessagesPerMinute: options.maxMessagesPerMinute ?? 0,
       wsOptions: options.wsOptions || {},
     };
   }
@@ -84,7 +97,24 @@ export class WebSocketTransport extends BaseTransport {
       host: this.options.host,
       port: this.options.port,
       maxPayload: this.options.maxMessageSize,
+      verifyClient: (info, done) => {
+        if (this.options.authToken) {
+          const header = info.req.headers['authorization'];
+          const expected = `Bearer ${this.options.authToken}`;
+          if (header !== expected) {
+            this.metrics.rejectedAuth++;
+            done(false, 401, 'Unauthorized');
+            return;
+          }
+        }
+        done(true);
+      },
       ...this.options.wsOptions,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      this.wss!.once('listening', () => resolve());
+      this.wss!.once('error', (error) => reject(error));
     });
 
     this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
@@ -105,7 +135,6 @@ export class WebSocketTransport extends BaseTransport {
 
       this.clients.set(clientId, clientState);
 
-      console.log(`WebSocket client connected: ${clientId} (${this.clients.size} total)`);
       this.emitConnect(clientId);
 
       // Setup heartbeat for this client
@@ -158,6 +187,10 @@ export class WebSocketTransport extends BaseTransport {
             }
           }
 
+          if (!this.applyMessageQuota(clientId, ws)) {
+            return;
+          }
+
           // Update activity
           clientState.lastActivity = Date.now();
 
@@ -180,7 +213,6 @@ export class WebSocketTransport extends BaseTransport {
       // Handle close
       ws.on('close', (code, reason) => {
         this.cleanupClient(clientId);
-        console.log(`WebSocket client disconnected: ${clientId} (code: ${code}, reason: ${reason})`);
       });
 
       // Handle errors
@@ -203,6 +235,14 @@ export class WebSocketTransport extends BaseTransport {
 
     // Start idle connection checker
     this.startIdleChecker();
+
+    const addressInfo = this.wss.address() as AddressInfo;
+    if (addressInfo && typeof addressInfo.port === 'number') {
+      const host = addressInfo.address && addressInfo.address !== '::'
+        ? addressInfo.address
+        : this.options.host;
+      this.listeningAddress = { host, port: addressInfo.port };
+    }
 
     this.isStarted = true;
     console.log(`WebSocket transport listening on ${this.options.host}:${this.options.port}`);
@@ -242,7 +282,9 @@ export class WebSocketTransport extends BaseTransport {
     });
 
     this.clients.clear();
+    this.messageQuota.clear();
     this.isStarted = false;
+    this.listeningAddress = null;
   }
 
   /**
@@ -391,6 +433,7 @@ export class WebSocketTransport extends BaseTransport {
       this.clients.delete(clientId);
       this.emitDisconnect(clientId);
     }
+    this.messageQuota.delete(clientId);
   }
 
   /**
@@ -410,6 +453,63 @@ export class WebSocketTransport extends BaseTransport {
       connectedClients: this.clients.size,
       maxClients: this.options.maxClients,
       clients: clientMetrics,
+      rejectedAuth: this.metrics.rejectedAuth,
+      rejectedQuota: this.metrics.rejectedQuota,
     };
+  }
+
+  getListeningAddress(): { host: string; port: number } | null {
+    return this.listeningAddress;
+  }
+
+  private authenticateConnection(request: IncomingMessage, ws: WebSocket): boolean {
+    if (!this.options.authToken) {
+      return true;
+    }
+
+    const header = request.headers['authorization'];
+    const expected = `Bearer ${this.options.authToken}`;
+    if (header !== expected) {
+      this.metrics.rejectedAuth++;
+      ws.close(4401, 'Unauthorized');
+      return false;
+    }
+
+    return true;
+  }
+
+  private applyMessageQuota(clientId: string, ws: WebSocket): boolean {
+    if (!this.options.maxMessagesPerMinute || this.options.maxMessagesPerMinute <= 0) {
+      return true;
+    }
+
+    const windowMs = 60_000;
+    const now = Date.now();
+    const record = this.messageQuota.get(clientId) ?? { windowStart: now, count: 0 };
+
+    if (now - record.windowStart >= windowMs) {
+      record.windowStart = now;
+      record.count = 0;
+    }
+
+    record.count += 1;
+    this.messageQuota.set(clientId, record);
+
+    if (record.count > this.options.maxMessagesPerMinute) {
+      this.metrics.rejectedQuota++;
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          error: {
+            code: -32003,
+            message: 'Message quota exceeded',
+            data: { maxMessagesPerMinute: this.options.maxMessagesPerMinute },
+          },
+        }),
+      );
+      return false;
+    }
+
+    return true;
   }
 }

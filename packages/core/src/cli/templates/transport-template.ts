@@ -6,8 +6,17 @@ export interface TransportTemplateOptions {
   name: string;
 }
 
+const toPascalCase = (value: string): string =>
+  value
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
+    .join('');
+
 export function generateTransportFile(options: TransportTemplateOptions): string {
-  const className = options.name.charAt(0).toUpperCase() + options.name.slice(1) + 'Transport';
+  const className = `${toPascalCase(options.name)}Transport`;
   
   return `import { MCPMessage } from 'mcp-accelerator';
 import { BaseTransport } from 'mcp-accelerator';
@@ -106,7 +115,7 @@ export class ${className} extends BaseTransport {
 }
 
 export function generateTransportTest(options: TransportTemplateOptions): string {
-  const className = options.name.charAt(0).toUpperCase() + options.name.slice(1) + 'Transport';
+  const className = `${toPascalCase(options.name)}Transport`;
   
   return `import { ${className} } from '../${options.name}-transport';
 
@@ -147,4 +156,3 @@ describe('${className}', () => {
 });
 `;
 }
-

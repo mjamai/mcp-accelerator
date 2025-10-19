@@ -1,6 +1,37 @@
 import { MCPServer } from '../../core/server';
-import { HttpTransport } from '@mcp-accelerator/transport-http';
+import { HttpTransport } from '../../../../transport-http/src';
 import { z } from 'zod';
+
+const initializeHttpClient = async (
+  baseUrl: string,
+  clientId: string,
+  protocolVersion = '2024-11-05',
+): Promise<void> => {
+  const response = await fetch(`${baseUrl}/mcp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': clientId,
+    },
+    body: JSON.stringify({
+      type: 'request',
+      id: `${clientId}-init`,
+      method: 'initialize',
+      params: {
+        protocolVersion,
+        clientInfo: {
+          name: 'http-integration-tests',
+          version: '1.0.0',
+        },
+      },
+    }),
+  });
+
+  expect(response.status).toBe(200);
+  const result = (await response.json()) as any;
+  expect(result.type).toBe('response');
+  expect(result.result.protocolVersion).toBe(protocolVersion);
+};
 
 /**
  * Integration tests for transports
@@ -17,7 +48,8 @@ describe('Transport Integration Tests', () => {
   describe('HTTP Transport', () => {
     let server: MCPServer;
     let transport: HttpTransport;
-    const TEST_PORT = 9999;
+    const TEST_PORT = 0;
+    let BASE_URL = '';
 
     beforeEach(async () => {
       server = new MCPServer({
@@ -59,6 +91,12 @@ describe('Transport Integration Tests', () => {
       
       await server.setTransport(transport);
       await server.start();
+      const address = transport.getListeningAddress();
+      if (!address) {
+        throw new Error('HTTP transport address unavailable');
+      }
+      const host = address.host === '::' ? '127.0.0.1' : address.host;
+      BASE_URL = `http://${host}:${address.port}`;
     });
 
     afterEach(async () => {
@@ -68,36 +106,47 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should handle basic request/response cycle', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-1');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-1',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '1',
-          method: 'tools/execute',
+          id: 'client-1-req',
+          method: 'tools/call',
           params: {
             name: 'echo',
-            input: { message: 'hello world' },
+            arguments: { message: 'hello world' },
           },
         }),
       });
 
       expect(response.status).toBe(200);
-      
+
       const result = await response.json() as any;
       expect(result.type).toBe('response');
-      expect(result.id).toBe('1');
-      expect(result.result.output.echo).toBe('hello world');
-      expect(typeof result.result.duration).toBe('number');
+      expect(result.id).toBe('client-1-req');
+      expect(Array.isArray(result.result.content)).toBe(true);
+      const payload = JSON.parse(result.result.content[0].text);
+      expect(payload.echo).toBe('hello world');
     });
 
     it('should list tools', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-2');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-2',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '2',
+          id: 'client-2-tools',
           method: 'tools/list',
         }),
       });
@@ -113,19 +162,35 @@ describe('Transport Integration Tests', () => {
       expect(toolNames).toContain('echo');
       expect(toolNames).toContain('slow');
       expect(toolNames).toContain('error');
+
+      const echoTool = result.result.tools.find((t: { name: string }) => t.name === 'echo');
+      expect(echoTool.inputSchema).toMatchObject({
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+          },
+        },
+        required: ['message'],
+      });
     });
 
     it('should handle validation errors', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-3');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-3',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '3',
-          method: 'tools/execute',
+          id: 'client-3-invalid',
+          method: 'tools/call',
           params: {
             name: 'echo',
-            input: { message: 123 }, // Should be string
+            arguments: { message: 123 }, // Should be string
           },
         }),
       });
@@ -139,16 +204,21 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should handle tool execution errors', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-4');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-4',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '4',
-          method: 'tools/execute',
+          id: 'client-4-error',
+          method: 'tools/call',
           params: {
             name: 'error',
-            input: {},
+            arguments: {},
           },
         }),
       });
@@ -162,16 +232,21 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should handle tool not found', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-5');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-5',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '5',
-          method: 'tools/execute',
+          id: 'client-5-missing',
+          method: 'tools/call',
           params: {
             name: 'nonexistent-tool',
-            input: {},
+            arguments: {},
           },
         }),
       });
@@ -184,16 +259,21 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should respect request timeout', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      await initializeHttpClient(BASE_URL, 'client-6');
+
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-6',
+        },
         body: JSON.stringify({
           type: 'request',
-          id: '6',
-          method: 'tools/execute',
+          id: 'client-6-timeout',
+          method: 'tools/call',
           params: {
             name: 'slow',
-            input: { delay: 3000 }, // 3 seconds, exceeds 2s timeout
+            arguments: { delay: 3000 }, // 3 seconds, exceeds 2s timeout
           },
         }),
       });
@@ -206,17 +286,22 @@ describe('Transport Integration Tests', () => {
     }, 10000); // Increase test timeout
 
     it('should handle concurrent requests', async () => {
+      await initializeHttpClient(BASE_URL, 'client-7');
+
       const requests = Array.from({ length: 10 }, (_, i) =>
-        fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+        fetch(`${BASE_URL}/mcp`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-client-id': 'client-7',
+          },
           body: JSON.stringify({
             type: 'request',
             id: String(i),
-            method: 'tools/execute',
+            method: 'tools/call',
             params: {
               name: 'echo',
-              input: { message: `message-${i}` },
+              arguments: { message: `message-${i}` },
             },
           }),
         })
@@ -231,12 +316,13 @@ describe('Transport Integration Tests', () => {
       results.forEach((result, i) => {
         expect(result.type).toBe('response');
         expect(result.id).toBe(String(i));
-        expect(result.result.output.echo).toBe(`message-${i}`);
+        const payload = JSON.parse(result.result.content[0].text);
+        expect(payload.echo).toBe(`message-${i}`);
       });
     });
 
     it('should provide health endpoint', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/health`);
+      const response = await fetch(`${BASE_URL}/health`);
       
       expect(response.status).toBe(200);
       
@@ -246,7 +332,7 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should provide metrics endpoint', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/metrics`);
+      const response = await fetch(`${BASE_URL}/metrics`);
       
       expect(response.status).toBe(200);
       
@@ -257,9 +343,12 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should handle invalid JSON', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-7',
+        },
         body: 'invalid json {',
       });
 
@@ -267,9 +356,12 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should handle missing method', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client-7',
+        },
         body: JSON.stringify({
           type: 'request',
           id: '7',
@@ -288,7 +380,8 @@ describe('Transport Integration Tests', () => {
   describe('HTTP Transport with Circuit Breaker', () => {
     let server: MCPServer;
     let transport: HttpTransport;
-    const TEST_PORT = 9998;
+    const TEST_PORT = 0;
+    let BASE_URL = '';
 
     beforeEach(async () => {
       server = new MCPServer({
@@ -324,6 +417,13 @@ describe('Transport Integration Tests', () => {
       
       await server.setTransport(transport);
       await server.start();
+      const address = transport.getListeningAddress();
+      if (!address) {
+        throw new Error('HTTP transport address unavailable');
+      }
+      const host = address.host === '::' ? '127.0.0.1' : address.host;
+      BASE_URL = `http://${host}:${address.port}`;
+      await initializeHttpClient(BASE_URL, 'circuit-client');
     });
 
     afterEach(async () => {
@@ -345,16 +445,19 @@ describe('Transport Integration Tests', () => {
       const responses = [];
       for (let i = 0; i < 5; i++) {
         try {
-          const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+          const response = await fetch(`${BASE_URL}/mcp`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-client-id': 'circuit-client',
+            },
             body: JSON.stringify({
               type: 'request',
               id: String(i),
-              method: 'tools/execute',
+              method: 'tools/call',
               params: {
                 name: 'crash',
-                input: {},
+                arguments: {},
               },
             }),
           });
@@ -382,16 +485,19 @@ describe('Transport Integration Tests', () => {
     });
 
     it('should work normally when circuit is closed', async () => {
-      const response = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+      const response = await fetch(`${BASE_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'circuit-client',
+        },
         body: JSON.stringify({
           type: 'request',
           id: '1',
-          method: 'tools/execute',
+          method: 'tools/call',
           params: {
             name: 'echo',
-            input: { message: 'test' },
+            arguments: { message: 'test' },
           },
         }),
       });
@@ -399,8 +505,8 @@ describe('Transport Integration Tests', () => {
       expect(response.status).toBe(200);
       const result = await response.json() as any;
       expect(result.type).toBe('response');
-      expect(result.result.output.echo).toBe('test');
+      const payload = JSON.parse(result.result.content[0].text);
+      expect(payload.echo).toBe('test');
     });
   });
 });
-
